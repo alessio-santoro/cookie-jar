@@ -2,49 +2,53 @@
 
 ## Purpose
 
-Make the split frontend and browser-worker application reproducible locally and deployable with explicit operational and network boundaries.
+Deploy the privacy-checking application as one Vercel project with reproducible development and verified browser execution, isolation, and operating limits.
 
 ## ADDED Requirements
 
 ### Requirement: Reproducible development setup
-Documentation SHALL provide Java 17+, Maven, Node, frontend dependency installation, browser installation, configuration, startup, and validation commands. A controlled cookie-setting fixture SHALL permit deterministic end-to-end verification without depending on a third-party website.
+Documentation SHALL provide the supported Node version, dependency/browser installation, same-origin local startup, build, and test commands. A controlled cookie-setting fixture SHALL support deterministic end-to-end checks without relying on a third-party site's changing behavior. Java, Maven, and a separately running backend SHALL NOT be prerequisites.
 
 #### Scenario: Local end-to-end verification
-- **WHEN** a developer follows the documented setup and scans the controlled fixture through the frontend and backend
+- **WHEN** a contributor follows the documented setup and checks the controlled fixture through the UI and same-origin API
 - **THEN** the dashboard displays actual browser-captured cookies and the expected outcome
 - **AND** any localhost fixture exception is explicit, test-only, and disabled in production
 
-### Requirement: Browser-ready backend container
-The backend image SHALL package the application, matching Chromium binaries, and required system libraries. It SHALL support a configurable listening port and run as a non-root user. Documentation SHALL state browser sandbox and host-resource requirements rather than silently disabling sandbox protection.
+### Requirement: Single Vercel deployment
+The UI and audit endpoint SHALL deploy together from one repository to one Vercel project and public origin. The selected architecture SHALL NOT require a second repository, separately hosted backend/proxy, external browser provider, or non-Vercel platform. It SHALL NOT require a frontend backend-host configuration variable.
 
-#### Scenario: Container smoke test
-- **WHEN** the image is built and run in a supported container environment
-- **THEN** health checks succeed and an audit of a controlled allowed target launches Chromium and returns real cookies
+#### Scenario: Preview and production routing
+- **WHEN** the application is deployed to a Vercel preview or production URL
+- **THEN** its UI and `/api/audit` work on that origin without a separately deployed backend or a static-page fallback intercepting API requests
 
-### Requirement: Explicit cross-origin policy
-The backend SHALL allow only configured exact frontend origins for audit requests and preflights, with a documented localhost development origin. It SHALL NOT enable wildcard origins or credentials by default.
+### Requirement: Browser feasibility gate
+Before full implementation, a protected deployment SHALL demonstrate real cookie capture, cold/warm execution, complete browser dependencies, isolated concurrent visits, deadline cleanup, and compliance with the selected Vercel plan's resource limits. A local-only browser test SHALL NOT count as deployment verification.
 
-#### Scenario: Allowed and disallowed origins
-- **WHEN** an allowed frontend sends a JSON POST preflight and an unrelated origin sends the same preflight
-- **THEN** only the allowed origin receives permission to call the audit endpoint
+#### Scenario: Deployed cookie-setting target
+- **WHEN** cold and warm invocations check a controlled allowed target on the intended Vercel setup
+- **THEN** actual browser-captured cookies are returned within the configured execution, memory, package, and response limits
 
-### Requirement: Vercel frontend deployment
-The project SHALL document the frontend root directory, install/build commands, output directory, and backend URL variable needed for Vercel. The production frontend SHALL use HTTPS to call an HTTPS backend and SHALL NOT require exposing secrets in browser configuration.
+#### Scenario: Browser package cannot run
+- **WHEN** the deployed browser cannot launch or satisfy resource, isolation, or cleanup requirements
+- **THEN** the gate fails and implementation pauses for an explicit architecture decision without substituting an HTTP-only check
 
-#### Scenario: Production frontend build
-- **WHEN** the frontend is built with its production backend URL and published on Vercel
-- **THEN** the deployed form sends requests to that URL rather than localhost
+### Requirement: Network feasibility gate
+The intended deployment SHALL demonstrate an enforced public-only browser egress boundary, including redirects, subresources, sockets, bypass attempts, and DNS rebinding, before public scanning. If the selected Vercel setup cannot meet it, work SHALL pause for an architecture decision without weakening the boundary or silently adding another service.
 
-### Requirement: Public hosting readiness
-Deployment guidance SHALL distinguish local MVP readiness from safe public exposure. Internet-facing deployment SHALL require enforced public-only egress, protection of metadata/internal networks, inbound rate limits, suitable browser isolation, and proxy timeouts longer than the bounded audit budget.
+#### Scenario: Network controls are unavailable
+- **WHEN** the chosen setup cannot prevent a validated hostname from reaching a non-public address after a DNS change
+- **THEN** public scanning remains disabled, the gate fails, and documentation does not describe URL validation as sufficient
 
-#### Scenario: Hosting without isolated egress
-- **WHEN** a candidate host cannot enforce the public-only browser network boundary
-- **THEN** documentation identifies it as unsuitable for unrestricted public scanning and does not describe application URL validation alone as sufficient
+### Requirement: Documented deployment limits
+Documentation SHALL state install/build/output settings, the selected Node runtime, function deadline, measured browser memory/cold-start behavior, concurrency semantics, ingress controls, spending safeguards, and rollback. It SHALL distinguish provider limits and charges from free or guaranteed capacity.
 
-### Requirement: Worker health
-A health endpoint SHALL expose lightweight process readiness without running an audit or disclosing configuration and SHALL become unhealthy or unready if the worker cannot accept audits because its execution subsystem has failed.
+#### Scenario: Deployment setup review
+- **WHEN** a contributor follows the Vercel setup
+- **THEN** they can identify the verified plan/settings and operating costs without configuring Java, another host, wildcard CORS, or a public backend secret
 
-#### Scenario: Health probe during normal work
-- **WHEN** a hosting platform probes a healthy worker during an audit
-- **THEN** the probe responds promptly without launching another browser or consuming audit capacity
+### Requirement: Public release readiness
+Public scanning SHALL remain disabled until browser/network gates, privacy handling, abuse controls, spending safeguards, and full-stack checks pass. Deployment health alone SHALL NOT be presented as proof that browser execution or private-network protection works.
+
+#### Scenario: Preview works but safety verification is incomplete
+- **WHEN** the page and function deploy but egress or isolation tests have not passed
+- **THEN** the deployment is identified as a protected feasibility preview, not a publicly ready scanner

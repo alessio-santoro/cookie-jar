@@ -1,54 +1,55 @@
 # Tasks
 
-## 1. Backend foundation and report contract
+## 1. Single-project Vercel feasibility gate
 
-- [ ] 1.1 Scaffold the Java 17 Maven/Spring Boot backend with Web, validation, Lombok, Playwright Java, test dependencies, and externalized port/settings; verify the application compiles and a context-startup test passes.
-- [ ] 1.2 Define immutable request, report, cookie, summary, observation, and error models matching the design contract; verify serialization tests cover all enums, empty arrays, null session expiry, and exclusion of cookie values.
-- [ ] 1.3 Implement dictionary rules, exact-before-prefix matching, provider/signature evidence, deterministic ordering, category counts, and outcome precedence; verify tests for `_ga`, `_ga_*`, `_gid`, `_fbp`, essential/unknown entries, near misses, duplicate rule rejection, zero cookies, and every outcome.
-- [ ] 1.4 Document the JSON contract, dictionary coverage, signature uncertainty, and observation limits; verify documented JSON against the serialization test fixtures.
+- [ ] 1.1 Scaffold one root JavaScript npm project with React/Vite, a server-only Node.js audit entrypoint, ESLint, test/build scripts, and a committed lockfile; verify installation, the initial build, a smoke test, and local routing to `/api/audit` without Java or TypeScript prerequisites.
+- [ ] 1.2 Implement the minimal Playwright/serverless-Chromium spike and deploy it to a protected Vercel preview; verify real cookies from a controlled allowed target on cold and warm invocations, record dependency versions, bundle size, response size, memory, startup time, and the intended plan's limits, and document the reproducible command.
+- [ ] 1.3 Demonstrate an enforceable public-only network boundary in the selected Vercel setup; verify denial of non-public IPv4/IPv6, mixed answers, DNS rebinding, private redirects/subrequests/sockets, and direct-connection bypass attempts using protected listeners, and document the actual mechanism rather than treating initial DNS checks as sufficient.
+- [ ] 1.4 Verify per-audit browser isolation, deadline/process-tree cleanup, concurrent-instance independence, launch flags, and absence of application secrets in the browser environment; record measured evidence and fail the gate if the isolation or 35-second execution budget cannot be met.
+- [ ] 1.5 Verify available Vercel ingress rate controls and spending/usage safeguards for the intended plan, document their semantics and costs, and confirm all browser/network gate evidence before starting group 2; if any gate fails or requires another service/runtime/host, pause for an explicit architecture decision without silently changing scope.
 
-## 2. Public destination and egress boundary
+## 2. Findings contract and classification
 
-- [ ] 2.1 Implement shared URL and DNS/address policy, normalization, credential/default-port restrictions, and safe error codes; verify tests for malformed URLs, mixed DNS answers, failures, IPv4/IPv6 special ranges, mapped addresses, and public destinations.
-- [ ] 2.2 Provide the validated-address outbound proxy path with fail-closed resolution and numeric-address connections for HTTP, HTTPS CONNECT, and WebSocket upgrades; verify public routing and denial of private targets, DNS rebinding, malformed authorities, and prohibited ports.
-- [ ] 2.3 Provide an enforceable reference browser/proxy network topology and isolated test fixture policy; verify direct browser egress is denied, production rejects local fixtures, and test exceptions cannot enable arbitrary private destinations.
-- [ ] 2.4 Document egress configuration, metadata/internal-network protection, default-port restrictions, DNS behavior, and supported deployment prerequisites; verify the reference setup commands and explicitly identify hosts that cannot satisfy isolation.
+- [ ] 2.1 Implement shared JavaScript report validation and request/error fixtures matching the design contract; verify tests for enums, arrays, null provider/signature/session expiry, UTC timestamps, category-count consistency, malformed responses, and exclusion of cookie values.
+- [ ] 2.2 Implement dictionary rules, exact-before-prefix matching, provider/signature evidence, stable ordering, counts, and FAIL/REVIEW/PASS precedence; verify `_ga`, `_ga_*`, `_gid`, `_fbp`, justified Essential entries, unknowns, near misses, duplicate rules, zero cookies, and every outcome.
+- [ ] 2.3 Document the report shape, signature coverage/uncertainty, consumer outcome mapping, and scope of the tool's fresh visit; verify examples against the shared fixtures and ensure no guarantee of website safety, actual cookie intent, or legal compliance.
 
-## 3. Browser observation and execution lifecycle
+## 3. Complete browser observation and destination policy
 
-- [ ] 3.1 Implement the isolated Playwright runner with nonpersistent context, documented viewport/locale, blocked service workers/popups, shared target policy, egress proxy configuration, bounded DOM/idle waits, and two-second observation; verify real-browser fixtures for HTTP-only, JavaScript, delayed, session, persistent, cross-origin, and duplicate-name cookies without consent interaction.
-- [ ] 3.2 Implement request routing and redirect/subrequest warnings with distinct unsafe-main-target failures; verify private redirects, resource requests, sockets, and popup attempts cannot reach protected fixture listeners.
-- [ ] 3.3 Implement single-audit admission, supervised hard execution deadline, browser-process cleanup, permit recovery, and execution-subsystem readiness; verify overload rejection, stalled launch/navigation termination, cleanup after failure, and successful subsequent scans.
-- [ ] 3.4 Document browser installation, sandbox requirements, timing protocol, limitations, and test-fixture execution; verify the documented browser test command on a clean test profile.
+- [ ] 3.1 Extend the gate's destination policy with URL normalization, length/credential/default-port restrictions, and safe rejection codes across every browser request surface; verify malformed URLs, DNS failure, mapped IPv6, special-use ranges, mixed answers, redirects, and production rejection of narrowly scoped test-fixture exceptions.
+- [ ] 3.2 Complete clean-context observation with documented viewport/locale, blocked service workers/popups, 20-second DOM deadline, three-second idle attempt, two-second observation, final URL, and warnings; verify real-browser fixtures for HTTP-only, JavaScript, delayed, session/persistent, cross-origin, and duplicate-name cookies, including an untouched consent button.
+- [ ] 3.3 Complete per-instance single-browser admission, 429 retry semantics, 35-second overall deadline, cancellation, owned-process teardown, and recovery; verify stalled launch/navigation, concurrent requests, timeout cleanup, and a subsequent successful scan without shared state.
+- [ ] 3.4 Document local browser installation, production package/isolation settings, the verified egress mechanism, timing, test-only fixture injection, and observation limits; verify the documented browser-test command and explain why the scan does not inspect the person's own browser or all tracking.
 
-## 4. REST API and cross-origin integration
+## 4. Same-origin API and privacy handling
 
-- [ ] 4.1 Implement `POST /api/audit`, input validation, centralized safe error responses, request correlation, redacted logging, and status mapping; verify controller tests for valid reports, malformed input, unsafe targets, target HTTP errors, busy/timeout states, and unexpected worker failures.
-- [ ] 4.2 Add exact-origin configurable CORS and lightweight health/readiness endpoints; verify allowed/disallowed preflights, no wildcard credentials, prompt health responses during scans, and unhealthy execution-subsystem behavior.
-- [ ] 4.3 Document local backend startup, environment variables, request examples, retry semantics, and privacy behavior; verify examples against the running API and prove query tokens/cookie values do not appear in application logs.
+- [ ] 4.1 Complete `POST /api/audit` in the Vercel Node.js function with JSON/method/origin validation, report validation, safe errors, and request IDs; verify route tests for malformed input, unsafe targets, target errors, capacity/deadline errors, unknown failures, disallowed origins, and unsupported methods without wildcard CORS.
+- [ ] 4.2 Add no-store responses, sanitized diagnostics, and no report persistence; verify query tokens, cookie values, and raw browser exception URLs do not appear in application logs or reports, and document separately what Vercel request/access logging can retain.
+- [ ] 4.3 Document relative API calls, one-project local startup, request examples, error/retry behavior, and the difference between function availability and browser readiness; verify examples against the running API without a frontend backend-URL variable.
 
-## 5. React frontend
+## 5. Consumer React interface
 
-- [ ] 5.1 Scaffold React/Vite/TypeScript, Tailwind, lint/type-check/build scripts, and component test tooling with a committed lockfile; verify dependency installation, initial production build, and a smoke component test.
-- [ ] 5.2 Record the confirmed audience/product constraints and obtain compact visual-direction approval before UI edits; verify the approved direction preserves the task-focused form/dashboard scope and makes no invented claims.
-- [ ] 5.3 Implement typed runtime-validated API integration, configurable backend base URL, timeout/abort handling, and readable backend/network/invalid-response errors; verify API tests for valid reports, non-JSON responses, malformed contracts, 400/429/502/504 errors, and timeout.
-- [ ] 5.4 Build the accessible URL form with keyboard submission, validation, mutually exclusive state handling, pending announcements, duplicate prevention, and retry; verify component tests include edited URLs, stale-result suppression, success-followed-by-failure, and disabled pending controls.
-- [ ] 5.5 Build the summary and responsive cookie table with all categories/outcomes, warnings, URLs, capture metadata, provider/path, expiry, and scope caveats; verify component tests for PASS/REVIEW/FAIL, zero cookies, long content, and timezone/session formatting.
-- [ ] 5.6 Document frontend environment/startup/Vercel build settings and inspect desktop/mobile, keyboard, 200% zoom, contrast, focus, status announcements, and reduced motion; verify lint/type-check/tests/build pass and fix defects found in a bounded visual check.
+- [ ] 5.1 Add Tailwind and component test tooling to the existing JavaScript React scaffold, record the confirmed privacy-conscious audience, and obtain compact visual-direction approval before UI edits; verify the approved concept prioritizes understandable findings and includes no invented trust claims.
+- [ ] 5.2 Implement relative `/api/audit` integration with runtime response validation, a 70-second client timeout, abort handling, and readable failure messages; verify tests for valid reports, non-JSON platform errors, malformed contracts, 400/429/502/504 responses, and timeout without a fabricated success.
+- [ ] 5.3 Build the accessible website-address form with "Check website", validation, keyboard submission, pending announcements, duplicate prevention, retry, and safe-link guidance; verify edited URLs, stale-result suppression, success-followed-by-failure, and pending controls in component tests.
+- [ ] 5.4 Build plain-language outcome headings, category explanations, counts, warnings, capture metadata, and fresh-visit limitations; verify all three headings, zero cookies, unknown-only cookies, matched providers, and absence of complete-safety, personal-browser, or numerical-score claims.
+- [ ] 5.5 Add responsive cookie evidence with Name, Domain, Category, Expiration, discoverable provider/path, session explanations, and timezone-aware dates; verify long content, session/persistent expiry, keyboard detail access, and mobile table behavior.
+- [ ] 5.6 Document interface/local commands and inspect desktop/mobile, keyboard, 200% zoom, contrast, focus, live status, and reduced motion in a bounded visual pass; verify lint, unit/component tests, and the production build, and correct discovered defects.
 
-## 6. Deployment preparation
+## 6. One-project release configuration
 
-- [ ] 6.1 Create the multistage non-root backend Dockerfile and build-context exclusions with matching Playwright/Chromium dependencies, configurable port, and supported sandbox execution; verify image build, container health, and a real-cookie browser smoke test.
-- [ ] 6.2 Add frontend Vercel configuration as needed and safe environment examples; verify a production build points to the configured HTTPS backend without secrets or localhost references.
-- [ ] 6.3 Document backend host requirements, enforced egress reference deployment, exact CORS origins, ingress rate limits, HTTPS, resource measurements, timeout alignment, health checks, and rollback; verify the deployment checklist distinguishes local readiness from safe public exposure.
+- [ ] 6.1 Finalize root Vercel build/output/API routing, supported Node runtime, packaged browser assets, server-only settings, and a 60-second function maximum; verify a protected preview serves the UI and real audit endpoint on the same origin with no backend-host variable, client secrets, or API fallback interception.
+- [ ] 6.2 Enable and test the verified ingress rate controls and provider spending safeguards; document actual plan requirements, resource measurements, cold starts, per-instance versus deployment-wide limits, and rollback, and verify excess requests cannot start browser work.
+- [ ] 6.3 Write the public-release checklist covering passed browser/network gates, privacy/provider-log settings, consumer caveats, HTTPS, rate/budget settings, and rollback; verify it does not mark an untested preview as publicly ready or claim scanning is unlimited/free.
 
 ## 7. Full-stack acceptance
 
-- [ ] 7.1 Run the frontend-to-backend-to-Chromium controlled-fixture flow for FAIL, REVIEW, PASS, delayed cookies, and zero cookies; verify actual captured JSON matches the rendered dashboard and no fixture consent button is activated.
-- [ ] 7.2 Run cross-layer failure/recovery checks for unsafe redirects/subrequests, DNS rebinding, concurrent scans, stalled scans, invalid responses, and denied CORS origins; verify no protected network connection succeeds, errors remain visible, and capacity recovers.
-- [ ] 7.3 Run backend verification, frontend lint/type-check/tests/build, and the container smoke check using documented commands; verify persistent source/configuration changes reproduce the passing results and record any genuine environmental blocker without marking its task complete.
+- [ ] 7.1 Run the UI-to-same-origin-API-to-Chromium fixture flow for FAIL, REVIEW, PASS, delayed cookies, and zero cookies; verify actual captured evidence matches the consumer headings/details and no consent interaction occurs.
+- [ ] 7.2 Run deployed controlled-target checks for cold/warm behavior, unsafe redirects/subrequests, DNS rebinding, concurrent instances, timeout/recovery, invalid responses, and origin denial; verify no protected connection succeeds, no cross-audit state leaks, and every failure is visible.
+- [ ] 7.3 Run the documented install, lint, unit/component/browser tests, build, and protected Vercel smoke commands; verify the persistent project reproduces the results without a separate host or repository, leaving any environmental/deployment blocker explicitly unfinished.
 
 ## Workflow follow-up
 
 - Review the implementation and verification evidence before archiving the change.
-- Deploy only after the chosen host satisfies the public-exposure checklist; supplying deployment credentials or creating cloud resources is outside the bootstrap.
+- Enable public scanning only after the single-project deployment passes every gate and release check; missing Vercel access or plan capabilities are blockers, not grounds to mark verification complete.
+- If feasibility fails, present the measured limitation and obtain approval before considering Vercel containers, another Vercel service, an external browser, or a different host.

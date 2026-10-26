@@ -2,7 +2,7 @@
 
 ## Purpose
 
-Observe cookies created during a clean first-page visit before consent interaction and report evidence-based findings with explicit limitations.
+Observe cookies created during a fresh automated visit before consent interaction, helping privacy-conscious people understand the evidence and its limits.
 
 ## ADDED Requirements
 
@@ -51,7 +51,7 @@ The dictionary SHALL assign Essential, Analytics, Marketing, or Unclassified usi
 - **THEN** neither matches the `_ga` or `_ga_` rules
 
 ### Requirement: Evidence-based outcome
-The result SHALL be FAIL if any Analytics or Marketing cookies exist, otherwise REVIEW if any Unclassified cookies exist, otherwise PASS. Counts SHALL include all four categories and total cookies. The report SHALL describe these as signature-based findings, not legal certification.
+The internal result SHALL be FAIL if any Analytics or Marketing cookies exist, otherwise REVIEW if any Unclassified cookies exist, otherwise PASS. Counts SHALL include all four categories and total cookies. Findings SHALL NOT imply complete privacy, verified cookie intent, website safety, or legal certification.
 
 #### Scenario: Known tracking takes precedence
 - **WHEN** a report contains both Analytics and Unclassified cookies
@@ -66,8 +66,16 @@ The result SHALL be FAIL if any Analytics or Marketing cookies exist, otherwise 
 - **THEN** its outcome is PASS with the observation and classification limitations
 
 ### Requirement: Transparent capture scope
-Successful reports SHALL identify requested URL, final URL, capture timestamp, duration, observation settings, and warnings. The stated scope SHALL exclude post-consent behavior, local-storage tracking, multi-page behavior, and cookies outside the observation window.
+Successful reports SHALL identify requested/final URLs, capture time, duration, observation settings, and warnings. Scope SHALL exclude post-consent behavior, local storage, fingerprinting, cookieless tracking, other pages, and later cookies. The tool's fresh visit SHALL NOT be presented as inspecting the user's own browser, history, accounts, or prior consent.
 
 #### Scenario: Public redirect and observation limits
 - **WHEN** a target redirects to another allowed public page and capture succeeds
 - **THEN** the report distinguishes the submitted and final URLs and includes scope limitations
+
+#### Scenario: Personal browser differs from the check
+- **WHEN** a person checks a site they have previously visited or logged into
+- **THEN** the finding explains that the automated visit does not use their browser cookies, account, extensions, or previous choices
+
+#### Scenario: No cookie signatures match
+- **WHEN** no known tracking cookie is observed
+- **THEN** the finding does not claim the website uses no tracking or is safe to visit
