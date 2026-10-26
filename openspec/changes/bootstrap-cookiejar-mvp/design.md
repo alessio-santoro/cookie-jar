@@ -1,5 +1,6 @@
 # Design
 
+
 ## Context
 
 See [proposal.md](proposal.md) for motivation and capability scope. The workspace currently contains only OpenSpec scaffolding and its generated Copilot setup workflow. There is no application, dependency manifest, test suite, deployment configuration, or visual identity to preserve. Java 17, Maven 3.9.9, Node 22, and npm are available locally; Docker availability has not been checked.
