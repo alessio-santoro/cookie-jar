@@ -2,7 +2,7 @@
 
 ## 1. Single-project Vercel feasibility gate
 
-- [ ] 1.1 Scaffold one root JavaScript npm project with React/Vite, a server-only Node.js audit entrypoint, ESLint, test/build scripts, and a committed lockfile; verify installation, the initial build, a smoke test, and local routing to `/api/audit` without Java or TypeScript prerequisites.
+- [x] 1.1 Scaffold one root JavaScript npm project with React/Vite, a server-only Node.js audit entrypoint, ESLint, test/build scripts, and a committed lockfile; verify installation, the initial build, a smoke test, and local routing to `/api/audit` without Java or TypeScript prerequisites.
 - [ ] 1.2 Implement the minimal Playwright/serverless-Chromium spike and deploy it to a protected Vercel preview; verify real cookies from a controlled allowed target on cold and warm invocations, record dependency versions, bundle size, response size, memory, startup time, and the intended plan's limits, and document the reproducible command.
 - [ ] 1.3 Demonstrate an enforceable public-only network boundary in the selected Vercel setup; verify denial of non-public IPv4/IPv6, mixed answers, DNS rebinding, private redirects/subrequests/sockets, and direct-connection bypass attempts using protected listeners, and document the actual mechanism rather than treating initial DNS checks as sufficient.
 - [ ] 1.4 Verify per-audit browser isolation, deadline/process-tree cleanup, concurrent-instance independence, launch flags, and absence of application secrets in the browser environment; record measured evidence and fail the gate if the isolation or 35-second execution budget cannot be met.
