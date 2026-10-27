@@ -151,19 +151,59 @@ requests are not guaranteed to reach the same Vercel instance, so use the
 invocation sequence together with Vercel runtime logs to establish cold/warm
 behavior. RSS is a sample rather than peak memory.
 
-Task 1.2 remains unchecked until a protected deployment is measured and its
-settings are recorded. The Vercel CLI reported **Logged out** in this environment
-and no project is linked, so deployment protection, plan limits, package inclusion,
-and deployed measurements could not be verified. Still missing:
+#### Observed deployment results
 
-- Protected Vercel preview and deployment identifier.
-- Actual packaged function size and deployed dependency inclusion.
-- Genuine cold/warm invocations, platform response size, startup, and memory.
-- The intended plan's confirmed resource limits and protected-preview settings.
+The project owner ran `npm run spike:preview` against the protected deployment
+for commit `76bac0d` on 2026-10-27. The deployment was
+[`cookie-l26bbhsf7-alessio-santoros-projects-a08c92da.vercel.app`](https://cookie-l26bbhsf7-alessio-santoros-projects-a08c92da.vercel.app).
+Both requests returned HTTP 200 and captured the expected HTTP-only and
+JavaScript-created fixture cookies without values.
 
-The local browser results above are not Vercel measurements and do not demonstrate
-safe isolation for untrusted sites. Public scanning remains disabled until later
-network and isolation gates pass.
+| Measurement | First request (instance invocation 1) | Second request (instance invocation 2) |
+| --- | ---: | ---: |
+| Browser | Chromium 153.0.8010.0 | Chromium 153.0.8010.0 |
+| Client elapsed | 6,429 ms | 612 ms |
+| Browser experiment duration | 3,605 ms | 295 ms |
+| Chromium executable preparation | 3,176 ms | 0 ms |
+| Browser startup/connect | 163 ms | 73 ms |
+| Function uptime reported | 4,635 ms | 5,256 ms |
+| Node RSS sample | 167,903,232 bytes | 168,845,312 bytes |
+| Browser-parent RSS sample | 134,885,376 bytes | 129,421,312 bytes |
+| HTTP response body | 662 bytes | 657 bytes |
+| Captured fixture cookies | 2 | 2 |
+
+Both requests reported the same function instance ID and sequential invocation
+numbers. This verifies a first observed invocation followed by a warm invocation
+on that instance. It does not isolate platform cold-start duration: the function
+reported 4.6 seconds of uptime at the first request, and the measurements do not
+include independent Vercel runtime-log evidence. RSS is sampled memory, not peak
+memory or the platform's billed memory.
+
+Pinned dependencies are `@sparticuz/chromium` 153.0.0 and `playwright-core`
+1.63.0. The deployed response reports `browserSandboxDisabled: true` because the
+Chromium package includes `--no-sandbox`. This fixture-only result does not
+demonstrate safe isolation for untrusted websites; public scanning remains
+disabled.
+
+The project owner reported that preview deployment protection was already
+enabled and the two fixture environment variables were added. The endpoint's
+successful authorized responses demonstrate that the preview variables were
+effective for this deployment. The test did not independently verify access
+protection against unauthenticated callers.
+
+Task 1.2 remains unchecked: the deployment proves Chromium packaging and fixture
+capture, but the complete acceptance record is missing:
+
+- Actual deployed function bundle size.
+- Platform-confirmed cold-start duration and peak/billed memory.
+- The intended Vercel plan and its applicable function/package/resource limits.
+- Independent verification that unauthenticated requests are challenged or denied
+  by deployment protection.
+
+The deployment URL above and the measured first/warm fixture calls are recorded,
+but platform logs/settings are still needed to verify the remaining items. Local
+results are not substitutes for these measurements, and no public scan or
+isolation/network gate has passed.
 
 ## Scope and next steps
 
