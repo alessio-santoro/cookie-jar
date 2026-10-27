@@ -12,7 +12,8 @@
     "preview": "vite preview --host 127.0.0.1",
     "lint": "eslint . --max-warnings 0",
     "test": "node --test",
-    "spike:browser": "node scripts/browser-spike.js"
+    "spike:browser": "node scripts/browser-spike.js",
+    "spike:preview": "node scripts/check-vercel-preview.js"
   },
   "dependencies": {
     "@sparticuz/chromium": "153.0.0",

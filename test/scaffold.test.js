@@ -53,7 +53,7 @@ test('routes same-origin POST to the disabled audit function, not the SPA', asyn
   assert.equal(response.headers.get('cache-control'), 'no-store')
   const body = await response.json()
   assert.equal(body.code, 'AUDIT_UNAVAILABLE')
-  assert.equal(body.message, 'Website checks are not available yet.')
+  assert.equal(body.message, 'Website checks are not available.')
   assert.match(body.requestId, /^[0-9a-f-]{36}$/)
   assert.equal('outcome' in body, false)
 })

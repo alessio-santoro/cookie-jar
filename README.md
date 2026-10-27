@@ -39,8 +39,12 @@ curl -i http://127.0.0.1:5173/api/audit \
 
 The expected response is **503**, JSON code `AUDIT_UNAVAILABLE`, and a request
 identifier. This is intentionally not an audit report: no target is visited.
-Other methods return **405** with `Allow: POST`. Unknown API routes return **404**
-instead of the React HTML page.
+The function only runs in a Vercel Preview deployment when both
+`COOKIEJAR_SPIKE_ENABLED=true` and a preview-only `COOKIEJAR_SPIKE_TOKEN` are
+configured. It also checks `VERCEL_ENV=preview`; production and local development
+remain disabled. The endpoint accepts no target URL: it only invokes its own
+controlled loopback fixture. Other methods return **405** with `Allow: POST`.
+Unknown API routes return **404** instead of the React HTML page.
 
 ## Validation and build
 
@@ -115,23 +119,51 @@ This local trusted-fixture check does not demonstrate safe isolation for
 untrusted websites, and that flag must not be described as a sandboxed browser.
 No public scan or isolation/network gate has passed.
 
-### Blocked deployment verification
+### Protected Vercel preview verification
 
-Task 1.2 remains unchecked: this checkout has no linked/authenticated Vercel
-project and no selected plan. Per the approved local-only scope, no preview was
-deployed and no deployment settings, cost, or protection configuration was assumed.
-The following measurements are still missing:
+The fixture API is disabled by default. To run it in a preview, first enable
+deployment protection for preview deployments in Vercel project settings and
+verify that an unauthenticated request is challenged or denied. Configure
+`COOKIEJAR_SPIKE_ENABLED=true` and a randomly generated, private
+`COOKIEJAR_SPIKE_TOKEN` with **Preview** environment scope only. Do not configure
+these variables for Production or Development. The handler also requires Vercel's
+`VERCEL_ENV=preview`, so setting the feature flag alone cannot enable production.
+
+For the local measurement command to call a protected preview, enable
+**Protection Bypass for Automation** in the project's Deployment Protection
+settings and create a bypass secret. This project-wide secret is sent only in
+Vercel's `x-vercel-protection-bypass` request header; keep it private and revoke
+it after the experiment. It is separate from the endpoint's fixture token.
+
+After deploying a protected preview, set `COOKIEJAR_PREVIEW_URL` to that
+deployment's HTTPS URL and set both `COOKIEJAR_SPIKE_TOKEN` and
+`COOKIEJAR_VERCEL_PROTECTION_BYPASS` in the local environment, then run:
+
+```sh
+npm run spike:preview
+```
+
+The command makes two serial requests to the fixed fixture endpoint; it never
+submits or accepts a website URL. It reports browser version, browser startup and
+capture timing, Node and browser-parent RSS samples, response bytes, function
+uptime/invocation sequence, and cookie metadata without cookie values. Sequential
+requests are not guaranteed to reach the same Vercel instance, so use the
+invocation sequence together with Vercel runtime logs to establish cold/warm
+behavior. RSS is a sample rather than peak memory.
+
+Task 1.2 remains unchecked until a protected deployment is measured and its
+settings are recorded. The Vercel CLI reported **Logged out** in this environment
+and no project is linked, so deployment protection, plan limits, package inclusion,
+and deployed measurements could not be verified. Still missing:
 
 - Protected Vercel preview and deployment identifier.
 - Actual packaged function size and deployed dependency inclusion.
 - Genuine cold/warm invocations, platform response size, startup, and memory.
 - The intended plan's confirmed resource limits and protected-preview settings.
 
-To resume, authenticate Vercel locally (never paste credentials into chat), identify
-the project/team and plan, and authorize its protected preview. Deployed testing
-must remain fixture-only until the later network/isolation gates pass. The local
-CLI is the reproducible local command, **not** a claim of a completed deployed
-verification or an unrestricted scan endpoint.
+The local browser results above are not Vercel measurements and do not demonstrate
+safe isolation for untrusted sites. Public scanning remains disabled until later
+network and isolation gates pass.
 
 ## Scope and next steps
 
