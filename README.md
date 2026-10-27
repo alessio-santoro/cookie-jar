@@ -188,22 +188,31 @@ disabled.
 The project owner reported that preview deployment protection was already
 enabled and the two fixture environment variables were added. The endpoint's
 successful authorized responses demonstrate that the preview variables were
-effective for this deployment. The test did not independently verify access
-protection against unauthenticated callers.
+effective for this deployment. An unauthenticated request to the Preview was
+redirected to Vercel login, independently confirming that deployment protection
+challenges callers without a bypass credential.
 
 Task 1.2 remains unchecked: the deployment proves Chromium packaging and fixture
 capture, but the complete acceptance record is missing:
 
 - Actual deployed function bundle size.
 - Platform-confirmed cold-start duration and peak/billed memory.
-- The intended Vercel plan and its applicable function/package/resource limits.
-- Independent verification that unauthenticated requests are challenged or denied
-  by deployment protection.
 
 The deployment URL above and the measured first/warm fixture calls are recorded,
 but platform logs/settings are still needed to verify the remaining items. Local
 results are not substitutes for these measurements, and no public scan or
 isolation/network gate has passed.
+
+The project owner reported the project is on **Hobby**. According to Vercel's
+published limits as of 2026-10-27, Hobby Functions have up to 2 GB memory, a
+300-second maximum duration, and a standard 250 MB uncompressed bundle limit.
+This project configures `maxDuration` to 60 seconds. Hobby's published monthly
+usage guidelines list 1,000,000 invocations, 4 active CPU hours, and 360 GB-hours
+of provisioned memory; these are usage allotments, not measurements or guarantees
+of this project's actual consumption. See Vercel's [Function limits](https://vercel.com/docs/functions/limitations)
+and [Hobby fair-use guidelines](https://vercel.com/docs/limits/fair-use-guidelines)
+for current details. Neither the deployed function bundle size nor platform-billed
+memory/CPU usage has been measured.
 
 ## Scope and next steps
 
