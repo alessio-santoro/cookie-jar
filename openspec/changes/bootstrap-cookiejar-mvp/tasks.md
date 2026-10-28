@@ -1,12 +1,12 @@
 # Tasks
 
-## 1. Single-project Vercel feasibility gate
+## 1. Local feasibility gate
 
 - [x] 1.1 Scaffold one root JavaScript npm project with React/Vite, a server-only Node.js audit entrypoint, ESLint, test/build scripts, and a committed lockfile; verify installation, the initial build, a smoke test, and local routing to `/api/audit` without Java or TypeScript prerequisites.
-- [ ] 1.2 Implement the minimal Playwright/serverless-Chromium spike and deploy it to a protected Vercel preview; verify real cookies from a controlled allowed target on cold and warm invocations, record dependency versions, bundle size, response size, memory, startup time, and the intended plan's limits, and document the reproducible command.
-- [ ] 1.3 Demonstrate an enforceable public-only network boundary in the selected Vercel setup; verify denial of non-public IPv4/IPv6, mixed answers, DNS rebinding, private redirects/subrequests/sockets, and direct-connection bypass attempts using protected listeners, and document the actual mechanism rather than treating initial DNS checks as sufficient.
-- [ ] 1.4 Verify per-audit browser isolation, deadline/process-tree cleanup, concurrent-instance independence, launch flags, and absence of application secrets in the browser environment; record measured evidence and fail the gate if the isolation or 35-second execution budget cannot be met.
-- [ ] 1.5 Verify available Vercel ingress rate controls and spending/usage safeguards for the intended plan, document their semantics and costs, and confirm all browser/network gate evidence before starting group 2; if any gate fails or requires another service/runtime/host, pause for an explicit architecture decision without silently changing scope.
+- [x] 1.2 Implement the minimal Playwright/Chromium spike and verify real cookies from a controlled allowed target; record dependency versions, response size, memory, and startup time, and document the reproducible command. (A protected Vercel preview deployment was also completed earlier; it is kept as a data point and is not required going forward.)
+- [ ] 1.3 Demonstrate an enforceable public-only network boundary locally; verify denial of non-public IPv4/IPv6, mixed answers, DNS rebinding, private redirects/subrequests/sockets, and direct-connection bypass attempts using protected local listeners, and document the actual mechanism (e.g. a loopback validating proxy with direct resolution/connection blocked) rather than treating initial DNS checks as sufficient.
+- [ ] 1.4 Verify per-audit browser isolation, deadline/process-tree cleanup, concurrent-audit independence, launch flags, and absence of application secrets in the browser environment; record measured evidence and fail the gate if the isolation or 35-second execution budget cannot be met.
+- [ ] 1.5 Confirm all local browser/network gate evidence before starting group 2, and record the Vercel-specific questions deferred to the deployment stage (serverless Chromium packaging, platform egress, ingress rate limits, spending controls, provider logs); if any local gate fails, pause for an explicit architecture decision without silently changing scope.
 
 ## 2. Findings contract and classification
 
@@ -18,14 +18,14 @@
 
 - [ ] 3.1 Extend the gate's destination policy with URL normalization, length/credential/default-port restrictions, and safe rejection codes across every browser request surface; verify malformed URLs, DNS failure, mapped IPv6, special-use ranges, mixed answers, redirects, and production rejection of narrowly scoped test-fixture exceptions.
 - [ ] 3.2 Complete clean-context observation with documented viewport/locale, blocked service workers/popups, 20-second DOM deadline, three-second idle attempt, two-second observation, final URL, and warnings; verify real-browser fixtures for HTTP-only, JavaScript, delayed, session/persistent, cross-origin, and duplicate-name cookies, including an untouched consent button.
-- [ ] 3.3 Complete per-instance single-browser admission, 429 retry semantics, 35-second overall deadline, cancellation, owned-process teardown, and recovery; verify stalled launch/navigation, concurrent requests, timeout cleanup, and a subsequent successful scan without shared state.
-- [ ] 3.4 Document local browser installation, production package/isolation settings, the verified egress mechanism, timing, test-only fixture injection, and observation limits; verify the documented browser-test command and explain why the scan does not inspect the person's own browser or all tracking.
+- [ ] 3.3 Complete per-process single-browser admission, 429 retry semantics, 35-second overall deadline, cancellation, owned-process teardown, and recovery; verify stalled launch/navigation, concurrent requests, timeout cleanup, and a subsequent successful scan without shared state.
+- [ ] 3.4 Document local browser installation, isolation settings, the verified local egress mechanism, timing, test-only fixture injection, and observation limits; verify the documented browser-test command and explain why the scan does not inspect the person's own browser or all tracking.
 
 ## 4. Same-origin API and privacy handling
 
-- [ ] 4.1 Complete `POST /api/audit` in the Vercel Node.js function with JSON/method/origin validation, report validation, safe errors, and request IDs; verify route tests for malformed input, unsafe targets, target errors, capacity/deadline errors, unknown failures, disallowed origins, and unsupported methods without wildcard CORS.
-- [ ] 4.2 Add no-store responses, sanitized diagnostics, and no report persistence; verify query tokens, cookie values, and raw browser exception URLs do not appear in application logs or reports, and document separately what Vercel request/access logging can retain.
-- [ ] 4.3 Document relative API calls, one-project local startup, request examples, error/retry behavior, and the difference between function availability and browser readiness; verify examples against the running API without a frontend backend-URL variable.
+- [ ] 4.1 Complete `POST /api/audit` in the Node.js handler (Vercel-compatible shape, mounted locally by Vite) with JSON/method/origin validation, report validation, safe errors, and request IDs; verify route tests for malformed input, unsafe targets, target errors, capacity/deadline errors, unknown failures, disallowed origins, and unsupported methods without wildcard CORS.
+- [ ] 4.2 Add no-store responses, sanitized diagnostics, and no report persistence; verify query tokens, cookie values, and raw browser exception URLs do not appear in application logs or reports, and note that hosting-provider request/access logging is reviewed in the deployment stage.
+- [ ] 4.3 Document relative API calls, one-project local startup, request examples, error/retry behavior, and the difference between process availability and browser readiness; verify examples against the running API without a frontend backend-URL variable.
 
 ## 5. Consumer React interface
 
@@ -36,20 +36,20 @@
 - [ ] 5.5 Add responsive cookie evidence with Name, Domain, Category, Expiration, discoverable provider/path, session explanations, and timezone-aware dates; verify long content, session/persistent expiry, keyboard detail access, and mobile table behavior.
 - [ ] 5.6 Document interface/local commands and inspect desktop/mobile, keyboard, 200% zoom, contrast, focus, live status, and reduced motion in a bounded visual pass; verify lint, unit/component tests, and the production build, and correct discovered defects.
 
-## 6. One-project release configuration
+## 6. Local release readiness
 
-- [ ] 6.1 Finalize root Vercel build/output/API routing, supported Node runtime, packaged browser assets, server-only settings, and a 60-second function maximum; verify a protected preview serves the UI and real audit endpoint on the same origin with no backend-host variable, client secrets, or API fallback interception.
-- [ ] 6.2 Enable and test the verified ingress rate controls and provider spending safeguards; document actual plan requirements, resource measurements, cold starts, per-instance versus deployment-wide limits, and rollback, and verify excess requests cannot start browser work.
-- [ ] 6.3 Write the public-release checklist covering passed browser/network gates, privacy/provider-log settings, consumer caveats, HTTPS, rate/budget settings, and rollback; verify it does not mark an untested preview as publicly ready or claim scanning is unlimited/free.
+- [ ] 6.1 Ensure `npm run build` plus `npm run preview` serve the UI and real audit endpoint on one local origin with no backend-host variable, client secrets, or API fallback interception; keep `vercel.json` and the Vercel-shaped `api/audit.js` untouched in behavior.
+- [ ] 6.2 Write the local run guide and a deferred-deployment checklist listing what the Vercel stage must still verify (serverless Chromium packaging, platform egress enforcement, cold starts, ingress rate limits, spending controls, provider logs, rollback); verify it does not describe the app as publicly ready or claim any Vercel result is verified.
 
-## 7. Full-stack acceptance
+## 7. Full-stack acceptance (local)
 
 - [ ] 7.1 Run the UI-to-same-origin-API-to-Chromium fixture flow for FAIL, REVIEW, PASS, delayed cookies, and zero cookies; verify actual captured evidence matches the consumer headings/details and no consent interaction occurs.
-- [ ] 7.2 Run deployed controlled-target checks for cold/warm behavior, unsafe redirects/subrequests, DNS rebinding, concurrent instances, timeout/recovery, invalid responses, and origin denial; verify no protected connection succeeds, no cross-audit state leaks, and every failure is visible.
-- [ ] 7.3 Run the documented install, lint, unit/component/browser tests, build, and protected Vercel smoke commands; verify the persistent project reproduces the results without a separate host or repository, leaving any environmental/deployment blocker explicitly unfinished.
+- [ ] 7.2 Run local controlled-target checks for unsafe redirects/subrequests, DNS rebinding, concurrent audits, timeout/recovery, invalid responses, and origin denial; verify no protected connection succeeds, no cross-audit state leaks, and every failure is visible.
+- [ ] 7.3 Run the documented install, lint, unit/component/browser tests, and build commands from a clean checkout; verify the results reproduce without a separate host, repository, or Vercel account.
 
 ## Workflow follow-up
 
 - Review the implementation and verification evidence before archiving the change.
-- Enable public scanning only after the single-project deployment passes every gate and release check; missing Vercel access or plan capabilities are blockers, not grounds to mark verification complete.
-- If feasibility fails, present the measured limitation and obtain approval before considering Vercel containers, another Vercel service, an external browser, or a different host.
+- Vercel deployment is out of scope for this change. Plan it as a separate change (serverless Chromium, platform egress enforcement, rate/spend controls, protected preview, release checklist) after local acceptance.
+- Do not enable public scanning until that deployment change passes every gate; local success is not deployment evidence.
+- If a local gate fails, present the measured limitation and obtain approval before considering an external browser, container, or different host.

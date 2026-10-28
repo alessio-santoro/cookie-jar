@@ -214,6 +214,46 @@ and [Hobby fair-use guidelines](https://vercel.com/docs/limits/fair-use-guidelin
 for current details. Neither the deployed function bundle size nor platform-billed
 memory/CPU usage has been measured.
 
+### Task 1.3 network-boundary feasibility (blocked)
+
+No enforceable public-only egress boundary has been demonstrated for the
+selected Vercel Hobby Function. The Preview endpoint still runs only its
+owned loopback fixture; it does not accept a target URL. The browser spike
+allows only that fixture through Playwright routing and blocks WebSockets, but
+this is application-level interception, not an egress boundary: it does not
+prove that Chromium, DNS rebinding, or a direct socket cannot bypass the route.
+There is no outbound firewall or destination policy configured in this
+repository's Vercel settings.
+
+Vercel's published networking documentation describes the Vercel Firewall as
+protecting inbound requests. Its [networking options](https://vercel.com/docs/networking)
+describe Static IPs for outbound source-IP allowlisting on Pro and Enterprise,
+Secure Compute for dedicated Enterprise networking, and Bring Your Own Cloud
+for Enterprise workloads in a customer-owned AWS account. The [Static IPs
+documentation](https://vercel.com/docs/networking/static-ips) describes
+stable outbound IPs and a NAT gateway, not destination-level egress filtering.
+The [Secure Compute documentation](https://vercel.com/docs/networking/secure-compute)
+describes dedicated networking, static IPs, and VPC peering; it does not
+document a public-only destination policy for this function. These options do
+not establish that a Hobby Function can prevent connections to private
+destinations.
+
+As of 2026-10-28, the following required checks have **not** been run against
+the deployed function: non-public IPv4/IPv6, mixed DNS answers, DNS rebinding,
+private redirects/subrequests/WebSockets, or direct-connection bypasses using
+protected listeners. The fixture-only endpoint cannot exercise those cases,
+and no arbitrary-target test endpoint should be exposed to do so. Therefore
+task 1.3 remains unchecked, and public scanning must remain disabled. URL
+validation or Playwright request routing alone must not be described as SSRF
+protection.
+
+**Decision required:** establish with Vercel whether this project has access to
+a supported, enforceable outbound destination filter, then repeat the
+protected-listener tests through the deployed browser; otherwise pause for an
+explicit architecture decision about a runtime/network boundary with
+controllable egress. Do not silently add a proxy/service, change runtime or
+host, or weaken the requirement.
+
 ## Scope and next steps
 
 - One root npm project: React source in [src/](src/), server-only function in
