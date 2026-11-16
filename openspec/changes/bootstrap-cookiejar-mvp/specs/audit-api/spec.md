@@ -18,15 +18,19 @@ Expose a same-origin, bounded website-check interface with predictable findings 
 - **THEN** the API returns HTTP 400 with a stable error code and readable message without starting a browser visit
 
 ### Requirement: Same-origin application API
-The website and `/api/audit` SHALL be served from the same public origin in a single deployment. Browser clients SHALL use a relative API path without a separately configured backend host. The route SHALL accept POST JSON, reject unsupported methods, and reject disallowed browser origins without enabling wildcard CORS.
+The website and `/api/audit` SHALL be served from the same origin during local development and in any later deployment. Browser clients SHALL use a relative API path without a separately configured backend host. The route SHALL accept POST JSON, reject unsupported methods, and reject disallowed browser origins without enabling wildcard CORS.
 
-#### Scenario: Deployed website check
-- **WHEN** a person submits a site on a preview or production deployment
-- **THEN** the browser posts to that deployment's `/api/audit` without a cross-origin backend setting
+#### Scenario: Local website check
+- **WHEN** a person submits a site during local development
+- **THEN** the browser posts to the local `/api/audit` without a cross-origin backend setting
 
 #### Scenario: Disallowed browser origin
 - **WHEN** a different origin attempts to submit a website check
 - **THEN** the endpoint does not grant cross-origin access and rejects a disallowed Origin header
+
+#### Scenario: Later deployed website check
+- **WHEN** the application is deployed to a selected preview or production target
+- **THEN** the browser posts to that deployment's `/api/audit` without a separately configured backend host
 
 ### Requirement: Public destination enforcement
 The audit executor SHALL reject targets resolving to any non-public IPv4 or IPv6 address and prevent non-public connections through redirects, subresources, sockets, or DNS changes. Resolution failures SHALL fail closed. All browser traffic SHALL be covered by an enforced egress boundary before public scanning is enabled; initial URL checks alone SHALL NOT satisfy this requirement.
@@ -66,18 +70,18 @@ Application-generated errors SHALL contain `code`, safe `message`, and `requestI
 - **THEN** the API returns the corresponding structured error and correlated server-side diagnostics
 
 ### Requirement: Bounded audit execution
-Each audit SHALL finish or terminate within a 35-second execution budget. A function instance SHALL admit at most one active browser without an unbounded queue and return HTTP 429 with `Retry-After` when occupied. Browser, process, context, and capacity resources SHALL be released on success, cancellation, and failure. Per-instance admission SHALL NOT be described as a global deployment limit.
+Each audit SHALL finish or terminate within a 35-second execution budget. A runtime instance, whether a local API process or deployed function instance, SHALL admit at most one active browser without an unbounded queue and return HTTP 429 with `Retry-After` when occupied. Browser, process, context, and capacity resources SHALL be released on success, cancellation, and failure. Per-instance admission SHALL NOT be described as a global deployment limit.
 
 #### Scenario: Concurrent submission
-- **WHEN** another request reaches an instance with an active browser
-- **THEN** it promptly receives HTTP 429 without launching a second browser on that instance
+- **WHEN** another request reaches a local process or deployed instance with an active browser
+- **THEN** it promptly receives HTTP 429 without launching a second browser in that runtime instance
 
 #### Scenario: Failed scan releases capacity
 - **WHEN** an audit fails or exceeds its execution budget
 - **THEN** its resources are cleaned up and a subsequent audit can run
 
 #### Scenario: Requests reach separate instances
-- **WHEN** the platform runs checks on multiple instances
+- **WHEN** checks run in separate local processes or deployed instances
 - **THEN** their browser storage, reports, and process cleanup are independent and a local capacity counter is not claimed to limit the whole deployment
 
 ### Requirement: Public scan abuse controls

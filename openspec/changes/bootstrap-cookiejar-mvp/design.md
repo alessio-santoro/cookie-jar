@@ -4,64 +4,59 @@
 
 See [proposal.md](proposal.md) for motivation and scope. The workspace contains OpenSpec planning and generated workflow files, not an implemented application. No application code or production deployment needs migration.
 
-The primary audience is ordinary internet users concerned about privacy and tracking; developers and site owners are secondary users. The selected direction is plain JavaScript, React/Vite, and a same-project Node.js Vercel Function. One repository, one Vercel project, and one public origin replace the previously planned Java/backend hosting split. Unknown cookies still require REVIEW, and scanning remains public HTTP(S)-only.
+The primary audience is ordinary internet users concerned about privacy and tracking; developers and site owners are secondary users. The immediate target is a locally runnable plain-JavaScript React/Vite application and Node.js API. The existing Vite adapter provides same-origin local routing. Vercel remains a possible later deployment target, but no provider, plan, or deployment is required to develop the application. Unknown cookies still require REVIEW, and live scans remain public HTTP(S)-only.
 
-This revision is a plan, not evidence that Chromium or the required egress boundary works on Vercel. Verify that first. Existing generated workflow files remain untouched unless directly needed for application validation.
+The local controlled-browser spike demonstrates fixture cookie capture, not safe arbitrary-URL scanning or deployment readiness. Build and validate the application locally against the owned fixture; keep arbitrary live scans disabled until local browser isolation and an enforceable public-only egress boundary have passed. Existing generated workflow files remain untouched unless directly needed for application validation.
 
 ## Goals / Non-Goals
 
 **Goals:**
 - Explain what was observed, why it matters, and what remains unknown without requiring cookie expertise.
-- Deploy UI and API together on Vercel without a second host, repository, or external browser provider.
+- Develop and run the UI and API together locally without a Vercel account, project, plan, or separate backend.
 - Keep JavaScript approachable while validating untrusted data and testing behavior.
-- Prove browser compatibility, public-only network enforcement, and bounded resource use before building the full experience.
+- Prove local browser compatibility and bounded resource use; prove local public-only network enforcement before enabling live scans.
+- Preserve a path to verify deployment-specific constraints later without making them prerequisites for local development.
 
 **Non-Goals:**
 - No database, job broker, persistent worker, accounts, consent interaction, browser extension, or legal rules engine.
 - No access to the visitor's existing browser cookies, history, login sessions, or extensions.
 - No numeric privacy/compliance percentage or claim that no cookies means no tracking.
 - Do not equate same-origin routing, HTTP request interception, or initial DNS checks with complete network enforcement.
+- No Vercel deployment, provider-plan selection, or deployment-wide abuse/cost configuration is required during local application development.
 
 ## Decisions
 
-### 1. One JavaScript application and deployment
+### 1. One locally runnable JavaScript application
 
-Use one root npm project with a React/Vite UI in `src/`, a Node.js Vercel Function at `api/audit.js`, server-only scanning code outside the client import tree, and small shared classification/report-validation modules where appropriate. Use `.js`/`.jsx`, Tailwind, ESLint, and tests; optional JSDoc improves editor hints without requiring TypeScript or a type-check build step. Commit the lockfile and pin compatible browser/automation versions.
+Use one root npm project with a React/Vite UI in `src/`, a Node.js API handler at `api/audit.js`, server-only scanning code outside the client import tree, and small shared classification/report-validation modules where appropriate. Use `.js`/`.jsx`, Tailwind, ESLint, and tests; optional JSDoc improves editor hints without requiring TypeScript or a type-check build step. Commit the lockfile and pin compatible browser/automation versions.
 
-The browser calls relative `/api/audit`; Vercel serves the static UI and invokes the API on the same origin. Local development must also route that path correctly, through the Vercel development server or an explicitly documented local adapter. SPA fallback rules must not swallow API routes.
+The browser calls relative `/api/audit`; local Vite development routes that path to the same Node handler on the same origin. SPA fallback rules must not swallow API routes. Keep this handler compatible with a possible later Vercel deployment, but do not require Vercel tooling or deployment to build and test local features.
 
-Next.js would also provide React and same-origin routes, but is unnecessary for one client page and one endpoint. Spring Boot could now run through Vercel's Beta Container Runtime/Services, but retaining two languages and a container is not the simplest fit. Neither is the selected implementation.
+Next.js would also provide React and same-origin routes, but is unnecessary for one client page and one endpoint. Spring Boot would retain two languages and a separately managed runtime, which is not the simplest fit. Neither is the selected implementation.
 
-### 2. Feasibility gate before full implementation
+### 2. Local browser verification before live scans
 
-Build the smallest deployable JavaScript audit spike first. Use `playwright-core` with a compatible `@sparticuz/chromium` distribution in the Node.js runtime, not Edge. Use a locally installed development Chromium where needed; package the production binary/dependencies into the function rather than relying on a separately hosted browser or arbitrary runtime download.
+Use the existing local Playwright/Chromium spike and its owned loopback fixture to verify actual HTTP-only and JavaScript cookie capture in fresh contexts. This check supports local application development; it does not verify safe arbitrary-URL scanning or a future deployment.
 
-The gate must prove on the intended Vercel plan/deployment:
-- The deployed function includes all required assets, launches Chromium, and captures real fixture cookies on cold and warm invocations within bundle, memory, file-descriptor, response-size, and duration limits.
-- Concurrent invocations never share browser state or each other's processes, reports, or temporary profiles.
-- Per-audit deadlines, cancellation, process cleanup, and resource recovery work rather than merely returning an HTTP timeout.
-- Browser isolation and the public-only egress requirements in decision 4 are enforceable, including adversarial requests and DNS changes.
-- Ingress abuse controls and budget settings are available on the intended plan, with documented usage limits and cost exposure.
+Develop report validation, classification, local API contracts, and UI behavior against controlled fixtures while live arbitrary-URL scans remain disabled. Integrate the live scanner only after local browser isolation, deadlines, cleanup, and an enforceable public-only egress boundary have been verified for the initial target, redirects, subresources, sockets, and DNS changes. If local enforcement cannot be demonstrated, keep live scans disabled and request an architecture decision rather than relying on URL validation or page-level routing alone.
 
-Vercel documentation currently lists a standard 250 MB uncompressed Node function limit and 2 GB Hobby memory; limits and paid/Beta options can change. Record the actual selected plan's limits and measured artifacts. Do not assume historical ten-second defaults, unlimited free scanning, or a locally passing browser test proves deployment compatibility.
-
-If the gate fails, stop apply with the evidence and request an architecture decision. Do not silently substitute HTTP-header-only scanning, weaken the network policy, add an external browser/proxy, move to another host, or claim completion. Vercel Container Runtime or an isolated Vercel execution service are possible separately approved alternatives, not automatic fallbacks.
+Vercel bundle size, cold/warm invocation behavior, function limits, and plan-specific controls are deployment-stage checks. A local pass does not satisfy those checks; perform them only if Vercel is selected for deployment.
 
 ### 3. Synchronous API and per-audit lifecycle
 
 Separate request validation, target policy, browser execution, classifier, and report assembly. Return the report in the request; no database or job queue is needed. Launch a distinct browser and fresh context for each audit, even on a reused function instance. Never reuse a browser profile or cookie jar between requests.
 
-Use an application execution deadline of 35 seconds including launch, capture, and teardown; configure the function for a 60-second platform maximum and the UI for a 70-second timeout, subject to the measured gate. A timeout must terminate the owned audit process tree, not just race a promise against a timer. Use `finally` cleanup and ownership-specific termination so concurrent invocations cannot kill one another's processes.
+Use an application execution deadline of 35 seconds including launch, capture, and teardown, subject to local measurement. A timeout must terminate the owned audit process tree, not just race a promise against a timer. Use `finally` cleanup and ownership-specific termination so concurrent scans cannot kill one another's processes. Set any client timeout above the application deadline. Configure a platform-specific maximum only when a deployment target is selected.
 
-Limit each warm instance to one active browser with no unbounded local queue, returning 429 with `Retry-After` when occupied. This is a per-instance resource guard, not a global semaphore: Vercel can start additional instances. Use Vercel ingress rate limiting and spending controls for deployment-wide abuse/cost management; do not add an external state store without approval. Cancellation or client disconnect must not leave unbounded background work.
+Limit each local API process to one active browser with no unbounded queue, returning 429 with `Retry-After` when occupied. This is a local resource guard, not a deployment-wide limit. For a future serverless deployment, verify per-instance semantics and configure that provider's ingress and spending controls before public release. Cancellation or client disconnect must not leave unbounded background work.
 
 ### 4. Public-only network boundary
 
 Validate URL structure, scheme, default port, credentials, length, and every resolved address. Reject non-public IPv4/IPv6, mixed answers, and failed resolution. Reapply policy to redirects, subrequests, sockets, and popups. Keep the rejection and warning behavior specified in [audit-api](specs/audit-api/spec.md).
 
-These checks alone are not an egress boundary: Chromium may resolve a checked hostname again, and traffic can bypass a page-level route. No Vercel network policy or privileged firewall capability has been verified for this project. The deployment spike must demonstrate a Vercel-compatible enforced boundary that denies non-public connections and DNS rebinding for all browser traffic. It must prevent direct connections bypassing any validating transport, not merely log them.
+These checks alone are not an egress boundary: Chromium may resolve a checked hostname again, and traffic can bypass a page-level route. No local or deployment network policy has been verified for this project. Before enabling live scans from the local application, demonstrate an enforceable boundary that denies non-public connections and DNS rebinding for all browser traffic. It must prevent direct connections bypassing any validating transport, not merely log them.
 
-Do not carry forward the previous assumption of an independently deployed validating proxy and custom host network rules: that contradicts the new deployment requirement. Any required Vercel service, container topology, plan upgrade, or additional operational component must be presented for approval if the selected function cannot meet the boundary. Until verified, public scanning is blocked; URL validation must not be advertised as complete SSRF protection.
+Do not silently assume an independently deployed validating proxy, custom host network rules, or another operational component. If local scanning requires such a component, present the architecture and operational costs for approval. Until local enforcement is verified, arbitrary live scans are blocked; URL validation must not be advertised as complete SSRF protection.
 
 Do not inject application secrets or user authentication into the browser process. Page code is untrusted. Verify the serverless Chromium launch flags and isolation model explicitly; do not describe a launch with `--no-sandbox` as equivalent to a sandboxed browser. If safe isolation cannot be demonstrated, the gate fails.
 
@@ -142,40 +137,36 @@ Use semantic labels/table headers, visible focus, accessible error/status announ
 
 The visual world is not yet approved. During apply, record the confirmed consumer audience and get compact visual-direction approval before UI edits. Do not invent privacy certifications, customer claims, risk percentages, or complete-safety assurances.
 
-### 8. One-origin deployment and operational controls
+### 8. Local routing and future deployment controls
 
-Deploy from the repository root as one Vercel project: Vite static output plus the Node.js function. Pin a supported Node version and verify browser compatibility with it. No separately deployed backend URL, cross-origin credential setup, Java runtime, Docker worker, or external proxy host is required by this selected direction.
+Develop from the repository root as one npm project: Vite serves the UI and routes `/api/audit` to the local Node.js handler. Pin a supported Node version and verify local browser compatibility. No separately deployed backend URL, cross-origin credential setup, Java runtime, Docker worker, or external proxy host is required for local development.
 
-Restrict the audit route to POST JSON, reject disallowed browser origins, and do not add wildcard CORS. Same-origin checks do not stop non-browser abuse; enable and test Vercel ingress rate limits and project spending controls before unrestricted public access. If the chosen plan lacks necessary controls, obtain a decision instead of pretending a per-instance counter provides them.
+Restrict the audit route to POST JSON, reject disallowed browser origins, and do not add wildcard CORS. Same-origin checks do not stop non-browser abuse. If a public deployment is later selected, verify its ingress rate limits and spending controls before unrestricted access; if the plan lacks necessary controls, obtain a decision instead of pretending a per-instance counter provides them.
 
-Keep secrets server-side and out of the Vite client bundle. A simple availability probe is optional; do not promise persistent-worker readiness or browser functionality from a process-only health check. Use the deployed browser smoke test for functional readiness.
+Keep secrets server-side and out of the Vite client bundle. A simple availability probe is optional; do not promise persistent-worker readiness or browser functionality from a process-only health check. Use the local controlled-browser smoke test for local readiness and a separate deployed browser smoke test if a deployment is selected.
 
-Document one install/build/deploy flow, local browser setup, the same-origin API, scan limitations, safe URL submission, the verified egress mechanism, resource measurements, rate/budget controls, cold-start behavior, and deployment rollback. Clearly separate a protected feasibility preview from safe public release.
+Document local install/build/test commands, browser setup, same-origin API routing, scan limitations, safe URL submission, verified local egress, and resource measurements. When a deployment target is selected, document its runtime, limits, rate/budget controls, cold-start behavior, and rollback separately. Clearly distinguish local fixture verification, protected deployment previews, and public release readiness.
 
-### 9. Source basis and limits of this plan
+### 9. Future deployment assumptions
 
-Checked on 2026-10-26:
-- [Vercel Functions limits](https://vercel.com/docs/functions/limitations): runtime resource and duration constraints; the selected plan must be checked during the gate.
-- [Vercel Container Runtime](https://vercel.com/docs/functions/runtimes/container) and [Services](https://vercel.com/docs/services): Beta alternatives permit containerized/custom-runtime applications in one Vercel project. A second host is not inherently necessary for Java.
-- [Sparticuz Chromium](https://github.com/Sparticuz/chromium): serverless Chromium packaging and Playwright integration; this is not a guarantee of this application's deployability or network safety.
-
-These sources inform a candidate architecture, not a passed feasibility gate or a selected paid service.
+Vercel remains a possible deployment target, not a current architectural dependency. Do not assume a plan, resource limit, ingress control, spending safeguard, or browser packaging result until a Vercel project is actually selected and measured. Any deployment-specific feasibility work belongs to the later deployment stage and does not replace local network-safety verification.
 
 ## Risks / Trade-offs
 
-- [Vercel cannot enforce required browser/network isolation] -> Fail the first gate and request an architecture decision; no silent reduction of guarantees.
-- [Chromium packaging, cold starts, or memory exceed limits] -> Measure on the actual deployment before building the full app; pin versions and retain reproducible fixtures.
-- [Automatic scaling multiplies browser cost] -> Per-instance admission plus tested ingress abuse and spending controls; never claim an in-memory global limit.
+- [The local runtime cannot enforce the required browser/network isolation] -> Keep arbitrary live scans disabled and request an architecture decision; continue fixture-backed development without weakening the guarantee.
+- [Local Chromium behavior or resource use is unsuitable] -> Measure locally with reproducible fixtures and keep deployment claims separate.
+- [A later deployment exceeds package, startup, or memory limits] -> Measure on the selected deployment before public release; pin versions and retain reproducible fixtures.
+- [A future deployment scales browser usage and cost] -> Verify provider ingress abuse and spending controls before public release; never claim an in-memory counter is a global limit.
 - [Tracking findings are mistaken for a personal privacy assessment] -> Consumer-facing explanations, fresh-visit disclosure, and no safety/compliance score.
 - [Dictionary, timing, geography, or bot-detection uncertainty] -> Show evidence and limits, preserve REVIEW, and use deterministic fixtures.
-- [Stalled work or platform errors] -> Owned-process teardown, early application deadline, no-store responses, and UI handling of non-JSON platform failures.
+- [Stalled work or API errors] -> Owned-process teardown, application deadlines, no-store responses, and UI handling of non-JSON failures.
 - [URLs reveal sensitive information to infrastructure or a target] -> No application report persistence, sanitized diagnostics, provider-log review, and submission guidance.
 - [Test exceptions weaken production restrictions] -> Inject only named fixture allowances in tests and verify production rejects them.
 
 ## Migration Plan
 
-1. Build and test the minimal Node/browser spike; deploy a protected Vercel preview with no unrestricted public scanner.
-2. Verify packaging, cold/warm execution, isolation, private-network denial, deadline cleanup, and available abuse/cost controls. Stop for a decision if any gate fails.
-3. Once the gate passes, complete classification/report validation, API error handling, and the consumer React interface in the same project.
-4. Run deterministic local full-stack tests and deployed controlled-target smoke tests; verify relative API routing and production restrictions.
-5. Enable public scanning only after the release checklist passes. Roll back with Vercel deployment rollback or disable scan access; no database migration is required.
+1. Run the existing controlled Chromium fixture locally and keep arbitrary live scans disabled.
+2. Develop report validation, classification, API behavior, and the consumer interface against local fixtures.
+3. Implement and verify local browser isolation, deadlines, cleanup, and public-only egress before enabling live public-URL scans locally. If local enforcement fails, stop live scanning for an architecture decision while fixture-backed development may continue.
+4. Run deterministic local full-stack tests and verify same-origin API routing and production-safe target restrictions.
+5. If Vercel is later selected, verify its packaging, cold/warm behavior, resource limits, network boundary, ingress controls, and spending safeguards before public release. Deployment rollback and provider controls are handled at that stage; no database migration is required.
