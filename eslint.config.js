@@ -18,6 +18,13 @@ export default [
     languageOptions: { globals: globals.node },
   },
   {
+    files: ['test/components/**/*.{js,jsx}'],
+    languageOptions: {
+      globals: { ...globals.node, ...globals.browser },
+      parserOptions: { ecmaFeatures: { jsx: true } },
+    },
+  },
+  {
     files: ['src/**/*.{js,jsx}'],
     languageOptions: {
       globals: globals.browser,

@@ -1,5 +1,6 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
+import tailwindcss from '@tailwindcss/vite'
 import audit from './api/audit.js'
 
 function registerLocalApi(server) {
@@ -22,8 +23,11 @@ function registerLocalApi(server) {
 }
 
 export default defineConfig({
+  server: { host: '127.0.0.1' },
+  preview: { host: '127.0.0.1' },
   plugins: [
     react(),
+    tailwindcss(),
     {
       name: 'cookiejar-local-api',
       configureServer: registerLocalApi,
