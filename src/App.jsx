@@ -127,8 +127,9 @@ export default function App() {
           </form>
 
           <p className="mt-5 rounded-lg bg-amber-50 px-4 py-3 text-sm leading-6 text-amber-950">
-            Live website checks are not enabled in this local build. Submitting
-            will not visit the address until local safety protections are verified.
+            Checks use a fresh browser visit and only public HTTP(S) addresses.
+            No scan will run if the required browser or network protections are
+            unavailable.
           </p>
 
           {pending && (

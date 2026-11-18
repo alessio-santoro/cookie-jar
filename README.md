@@ -1,18 +1,24 @@
 # CookieJar
 
-A privacy-focused website checker with an accessible React interface, fixture-backed
-findings dashboard, and a local-only controlled browser experiment. The public API
-does not run scans yet; arbitrary live scanning and deployment remain disabled.
+A privacy-focused website checker with an accessible React interface and a
+same-origin API for fresh, isolated visits to public websites. Live checks run
+only when the local browser and network protections are available; deployment
+and public service readiness have not been verified.
 
 ## Requirements
 
 - Node.js 22 (22.17 or newer within that major version)
 - npm
+- Linux with `unshare` and either `ip` or BusyBox, plus user/network namespaces
+  enabled for the current user.
+- A host security policy that permits Chromium's own sandbox namespaces.
 
-No Java, Maven, TypeScript, Vercel account, or separate browser download is needed
-for local validation. The browser experiment uses the packaged Linux Chromium
-binary and requires a compatible Linux environment/system libraries; it was
-verified on Linux x64. If using nvm, run `nvm use` from the repository root.
+No Java, Maven, TypeScript, Vercel account, or separate browser download is
+needed. The packaged Linux Chromium binary and its system libraries are used by
+the live scanner. Live checks fail closed with HTTP 503 when the Linux boundary
+or Chromium sandbox cannot start; there is no `--no-sandbox` fallback. Other
+operating systems are not supported for live scans. If using nvm, run `nvm use`
+from the repository root.
 
 ## Local development
 
@@ -31,18 +37,21 @@ as the future Vercel Function in [api/audit.js](api/audit.js). Restart the local
 server after changing the handler. This adapter does not emulate Vercel limits,
 isolation, packaging, or network enforcement.
 
-To confirm API routing (use the actual port Vite prints):
+To confirm same-origin API routing and the local-target safety gate (use the
+actual port Vite prints):
 
 ```sh
 curl -i http://127.0.0.1:5173/api/audit \
   -H 'Content-Type: application/json' \
-  --data '{"url":"https://example.com"}'
+  --data '{"url":"http://127.0.0.1"}'
 ```
 
-The expected response is **503**, JSON code `AUDIT_UNAVAILABLE`, and a request
-identifier. This is intentionally not an audit report: no target is visited.
-Other methods return **405** with `Allow: POST`. Unknown API routes return **404**
-instead of the React HTML page.
+The expected response is **400**, JSON code `UNSAFE_TARGET`, and a request ID.
+The private address is rejected before Chromium starts. To request a real live
+check, use a public HTTP(S) URL that you are authorized to submit; this contacts
+that site from the local service. A successful response is possible only when
+all browser and network gates pass. Other methods return **405** with
+`Allow: POST`. Unknown API routes return **404** instead of the React HTML page.
 
 Malformed JSON is rejected before any browser work:
 
@@ -59,21 +68,41 @@ Application errors are JSON with a stable `code`, readable `message`, and
 
 | Response | Meaning and action |
 | --- | --- |
-| 400 `INVALID_JSON` / `INVALID_REQUEST` | Correct the JSON or website address; do not retry unchanged. |
+| 400 `INVALID_JSON` / `INVALID_REQUEST` / `UNSAFE_TARGET` | Correct the JSON/address; only public HTTP(S) destinations on their default ports are accepted. |
 | 403 `ORIGIN_NOT_ALLOWED` | Submit from the same origin; repeating the disallowed request will not help. |
 | 405 `METHOD_NOT_ALLOWED` | Use POST as shown above. |
 | 413 `REQUEST_TOO_LARGE` / 415 `UNSUPPORTED_MEDIA_TYPE` | Send a smaller JSON request with `Content-Type: application/json`. |
+| 429 `AUDIT_BUSY` | One local browser check is active; wait for `Retry-After` seconds before retrying. No request is queued. |
+| 502 `TARGET_UNAVAILABLE` / `TARGET_HTTP_ERROR` | The site could not be reached or returned an HTTP error. |
+| 503 `BROWSER_NETWORK_UNAVAILABLE` / `BROWSER_RUNTIME_UNAVAILABLE` | Required network isolation or Chromium sandbox startup failed; no unprotected scan is attempted. |
+| 504 `AUDIT_TIMEOUT` | The bounded browser check exceeded its time limit. |
 | 500 `INVALID_AUDIT_REPORT` / `AUDIT_FAILED` | The executor failed or returned an invalid report; use the request ID for diagnosis and do not retry automatically. |
-| 503 `AUDIT_UNAVAILABLE` | Scanning is intentionally disabled in this scaffold; retry only after an implementation change enables it. |
 
 ### API availability is not browser readiness
 
-The local API currently validates requests and returns `AUDIT_UNAVAILABLE` for
-valid checks without launching Chromium. A successful response from Vite or a
-working `/api/audit` route does not mean a scan is ready. `npm run spike:browser`
-separately verifies packaged Chromium against the owned local fixture; it does
-not connect that browser to the API, verify public-only network enforcement, or
-enable arbitrary URL scans.
+The local API validates the request and the public destination before starting
+one fresh Chromium context. A successful response from Vite or a working
+`/api/audit` route does not prove that the local Chromium sandbox or egress
+protections are available. Live scans require Linux user/network namespaces,
+loopback as the browser's only network interface, and a forced proxy that
+validates every destination and pins each approved public DNS address. The
+namespace has no external route; QUIC is disabled. A missing or failed gate
+returns 503 instead of falling back to direct networking or an unsandboxed
+browser.
+
+One local API process admits one browser check at a time, with no queue. The
+server deadline is 35 seconds including browser startup, capture, and cleanup;
+Chromium launch is capped at 15 seconds. Navigation waits up to 20 seconds for
+the DOM, then tries network idle for 3 seconds and observes cookies after a
+2-second settle period. The browser request itself times out after 70 seconds,
+leaving room for a server error response and cleanup.
+
+On this host, Chromium's sandbox cannot create its required nested user
+namespace (the host security policy blocks it), so the real-browser boundary
+test is skipped and live API requests return `503 BROWSER_RUNTIME_UNAVAILABLE`.
+The proxy/namespace boundary tests still run. Configure the host to permit
+Chromium sandbox namespaces before expecting successful local scans; do not
+weaken the launch flags to work around this limitation.
 
 ## Validation and build
 
@@ -81,6 +110,7 @@ enable arbitrary URL scans.
 npm run lint
 npm test
 npm run test:components
+npm run test:browser
 npm run observe:fixture
 npm run build
 npm run preview
@@ -90,6 +120,11 @@ Tests start and close their own loopback Vite server on an available port. They
 verify React entrypoint/JSX compilation and actual same-origin HTTP routing.
 They also launch the packaged Chromium twice against an owned loopback fixture
 and verify actual HTTP-only and JavaScript cookies in fresh contexts.
+`npm run test:browser` verifies the isolated network/proxy boundary, owned
+observation fixture, and packaged-browser spike. The isolated real-browser test
+is skipped only when the host refuses Chromium sandbox namespaces; the live API
+then remains unavailable. The test-only observation fixture accepts no URL and
+is not an exception in the production destination policy.
 `npm run test:components` covers the form, API client, outcome summary, and
 responsive cookie evidence, including keyboard focus and expiry formatting.
 `npm run observe:fixture` runs the separate, owned local Chromium observation
@@ -98,11 +133,13 @@ fixture; it is not connected to the audit API and accepts no target URL.
 the browser assets. The local preview command serves that build and uses the
 same development API adapter. A static host alone cannot execute the API.
 
-## Findings contract (fixture-backed; API not enabled)
+## Findings contract (live API is locally gated)
 
 The shared JavaScript contract and classifier are tested against
-[the audit fixtures](test/fixtures/audit-contract.js). They do not enable scans:
-`POST /api/audit` still returns `503 AUDIT_UNAVAILABLE`.
+[the audit fixtures](test/fixtures/audit-contract.js). A live API response is
+returned only after the destination policy, isolated network boundary, and
+sandboxed browser start succeed. The named owned observation fixture is
+test-only; it is not exposed as a live-scan URL exception.
 
 A successful report contains `requestedUrl`, `finalUrl`, `capturedAt`,
 `durationMs`, `outcome`, `summary`, `observation`, `warnings`, and `cookies`.
@@ -114,7 +151,7 @@ are represented as `null`. The visitor's query string and fragment are removed
 from reported requested/final URLs so token-bearing links are not echoed back.
 
 This example is the `validAuditReport` fixture and is checked by the report
-validator; it is not a result returned by the disabled API:
+validator; it is not a result from a real live visit:
 
 ```json
 {
@@ -210,8 +247,9 @@ per-run marker but never includes those values in its output.
 
 There is **no URL input or private-network bypass switch**. Page request routing
 allows only the owned fixture and blocks page WebSockets. This is a deliberately
-local test exception, **not** the enforced egress boundary required for public
-scanning. The CLI is not reachable through `/api/audit`, which stays disabled.
+local test exception, **not** the enforced egress boundary used by live scans.
+The fixture code is separate from `/api/audit`; no production private-network
+allowlist or fixture injection setting is exposed.
 
 JSON output records the runtime and dependency versions, installed package sizes,
 browser version, binary preparation/startup timing, cookie metadata, Node RSS,
@@ -244,10 +282,12 @@ from an earlier process. RSS samples are not browser-tree peak memory or the
 deployment's billed memory. The serialized result is not an API report or HTTP
 response. Capture duration excludes teardown. The command labels all these limits.
 
-**Isolation finding:** the packaged Chromium arguments include `--no-sandbox`.
-This local trusted-fixture check does not demonstrate safe isolation for
-untrusted websites, and that flag must not be described as a sandboxed browser.
-No public scan or isolation/network gate has passed.
+**Isolation finding:** the packaged Chromium arguments used by the trusted
+fixture spike include `--no-sandbox`. The production live-scan launcher removes
+that flag and also removes sandbox-disabling flags; if the sandbox cannot start,
+the API returns 503. The fixture spike does not demonstrate a sandboxed browser
+or safe arbitrary-URL scanning. The egress policy and namespace tests pass, but
+this host has not passed the real Chromium sandbox gate.
 
 ### Optional future deployment verification
 
@@ -276,11 +316,12 @@ verification and do not enable an unrestricted scan endpoint.
 - Plain JavaScript/JSX, ESLint, and Node's built-in test runner.
 - The website-address form, plain-language result dashboard, and responsive
   cookie evidence view are implemented in the approved friendly-utility
-  direction. Local website checks remain disabled until browser isolation and
-  public-only network protections are verified.
-- Shared report validation and cookie classification have fixture-backed tests,
-  but the API does not expose scans. There are no public scans, persistence, or
-  mock findings.
+  direction. The API runs live checks only when the local browser sandbox and
+  public-only network boundary are available; this host currently fails the
+  Chromium sandbox gate and returns 503.
+- Shared report validation and cookie classification have fixture-backed tests.
+  Reports are not persisted, and there are no public deployment scans or mock
+  findings.
 - Tailwind and Vitest/Testing Library component-test tooling are configured;
   client, form, result, and evidence component tests are in place.
 - Vercel browser deployment and public-only network protection remain unverified.

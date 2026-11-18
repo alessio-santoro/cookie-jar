@@ -12,6 +12,7 @@
     "preview": "vite preview --host 127.0.0.1",
     "lint": "eslint . --max-warnings 0",
     "test": "node --test",
+    "test:browser": "node --test test/browser-network.test.js test/browser-observation.test.js test/browser-spike.test.js",
     "test:components": "vitest run --config vitest.config.js",
     "spike:browser": "node scripts/browser-spike.js",
     "observe:fixture": "node scripts/browser-observation.js"

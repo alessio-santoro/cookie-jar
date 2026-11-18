@@ -10,7 +10,8 @@ const HTTP_ERROR_MESSAGES = new Map([
   [415, 'The request could not be sent. Please refresh and try again.'],
   [429, 'Another website check is running. Wait a moment, then try again.'],
   [502, 'The website could not be reached. Check the address and try again.'],
-  [503, 'Website checks are not available yet.'],
+  [503, 'Website checks are unavailable because required browser or network '
+    + 'protections could not start.'],
   [504, 'The website took too long to respond. Try again later.'],
 ])
 

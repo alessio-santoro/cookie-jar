@@ -34,6 +34,7 @@ export class DestinationPolicyError extends Error {
     super(message)
     this.name = 'DestinationPolicyError'
     this.code = code
+    this.status = 400
   }
 }
 
@@ -169,7 +170,7 @@ function resolverAddresses(result) {
   ))
 }
 
-export async function validatePublicTarget(value, { resolveHost = lookup } = {}) {
+export async function resolvePublicTarget(value, { resolveHost = lookup } = {}) {
   const normalized = normalizeAuditTarget(value)
   const target = new URL(normalized)
   const hostname = target.hostname.replace(/^\[|\]$/g, '')
@@ -192,5 +193,10 @@ export async function validatePublicTarget(value, { resolveHost = lookup } = {})
     throw unsafeTarget()
   }
 
+  return { normalized, address: addresses[0] }
+}
+
+export async function validatePublicTarget(value, options) {
+  const { normalized } = await resolvePublicTarget(value, options)
   return normalized
 }

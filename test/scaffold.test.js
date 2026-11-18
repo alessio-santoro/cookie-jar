@@ -6,11 +6,35 @@ import { createElement } from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { createServer } from 'vite'
 import { createAuditHandler } from '../api/audit.js'
+import {
+  createBrowserAuditExecutor,
+} from '../server/browser-audit.js'
+import {
+  BrowserNetworkBoundaryError,
+} from '../server/browser-network.js'
 import { isAuditError } from '../src/shared/audit-contract.js'
 import { validAuditReport } from './fixtures/audit-contract.js'
 
 let server
 let origin
+
+async function invokeAudit(handler, url) {
+  const response = {
+    headers: {},
+    setHeader(name, value) {
+      this.headers[name] = value
+    },
+    end(body) {
+      this.body = body
+    },
+  }
+  await handler({
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: { url },
+  }, response)
+  return response
+}
 
 before(async () => {
   server = await createServer({
@@ -46,10 +70,10 @@ test('serves the React entrypoint, compiles JSX, and renders the website form', 
   assert.match(markup, /Check a website before you choose\./)
   assert.match(markup, /Website address/)
   assert.match(markup, /Check website/)
-  assert.match(markup, /Live website checks are not enabled/)
+  assert.match(markup, /No scan will run if the required browser or network protections are/)
 })
 
-test('keeps live targets disabled until the local safety gate is implemented', async () => {
+test('rejects private targets before launching the browser', async () => {
   const response = await fetch(`${origin}/api/audit`, {
     method: 'POST',
     headers: {
@@ -59,20 +83,17 @@ test('keeps live targets disabled until the local safety gate is implemented', a
     body: JSON.stringify({ url: 'http://127.0.0.1' }),
   })
 
-  assert.equal(response.status, 503)
+  assert.equal(response.status, 400)
   assert.match(response.headers.get('content-type'), /application\/json/)
   assert.equal(response.headers.get('cache-control'), 'no-store')
   const body = await response.json()
-  assert.equal(body.code, 'AUDIT_UNAVAILABLE')
-  assert.equal(body.message, 'Website checks are not available yet.')
+  assert.equal(body.code, 'UNSAFE_TARGET')
   assert.equal(isAuditError(body), true)
   assert.equal('outcome' in body, false)
 })
 
-test('runs the documented request example against the local same-origin API', async () => {
+test('documents the relative API path and rejects a private target', async () => {
   const readme = readFileSync(new URL('../README.md', import.meta.url), 'utf8')
-  const exampleBody = readme.match(/--data '([^']+)'/)?.[1]
-  assert.ok(exampleBody, 'README should include a JSON API request example')
   assert.match(readme, /Browser code uses the relative path `\/api\/audit`/)
 
   const response = await fetch(`${origin}/api/audit`, {
@@ -81,13 +102,13 @@ test('runs the documented request example against the local same-origin API', as
       'Content-Type': 'application/json',
       Origin: origin,
     },
-    body: exampleBody,
+    body: JSON.stringify({ url: 'http://127.0.0.1' }),
   })
 
-  assert.equal(response.status, 503)
+  assert.equal(response.status, 400)
   const error = await response.json()
   assert.equal(isAuditError(error), true)
-  assert.equal(error.code, 'AUDIT_UNAVAILABLE')
+  assert.equal(error.code, 'UNSAFE_TARGET')
 })
 
 test('rejects malformed JSON and invalid request payloads', async () => {
@@ -148,6 +169,76 @@ test('rejects disallowed origins before reading or executing the request', async
   const error = await response.json()
   assert.equal(isAuditError(error), true)
   assert.equal(error.code, 'ORIGIN_NOT_ALLOWED')
+})
+
+test('keeps scans unavailable when the destination boundary gate fails', async () => {
+  const executor = createBrowserAuditExecutor({
+    validateTarget: async (url) => url,
+    createNetworkBoundary: async () => {
+      throw new BrowserNetworkBoundaryError()
+    },
+  })
+  const handler = createAuditHandler({ executeAudit: executor, logger: { error() {} } })
+  const response = await invokeAudit(handler, 'https://example.com/')
+
+  assert.equal(response.statusCode, 503)
+  assert.equal(response.headers['Cache-Control'], 'no-store')
+  const error = JSON.parse(response.body)
+  assert.equal(isAuditError(error), true)
+  assert.equal(error.code, 'BROWSER_NETWORK_UNAVAILABLE')
+  assert.equal('outcome' in error, false)
+})
+
+test('keeps scans unavailable when Chromium cannot start with its sandbox', async () => {
+  let boundaryClosed = false
+  const executor = createBrowserAuditExecutor({
+    validateTarget: async (url) => url,
+    createNetworkBoundary: async () => ({
+      executablePath: '/isolated/chromium',
+      environment: {},
+      async close() {
+        boundaryClosed = true
+      },
+    }),
+    launchBrowser: async () => {
+      throw new Error('Chromium sandbox unavailable')
+    },
+  })
+  const handler = createAuditHandler({ executeAudit: executor, logger: { error() {} } })
+  const response = await invokeAudit(handler, 'https://example.com/')
+
+  assert.equal(response.statusCode, 503)
+  assert.equal(boundaryClosed, true)
+  assert.equal(JSON.parse(response.body).code, 'BROWSER_RUNTIME_UNAVAILABLE')
+})
+
+test('applies browser admission limits to API requests and returns retry timing', async () => {
+  let releaseBoundary
+  let enteredBoundary
+  const entered = new Promise((resolve) => { enteredBoundary = resolve })
+  const boundaryFailure = new Promise((resolve, reject) => {
+    releaseBoundary = reject
+  })
+  const executor = createBrowserAuditExecutor({
+    validateTarget: async (url) => url,
+    createNetworkBoundary: () => {
+      enteredBoundary()
+      return boundaryFailure
+    },
+  })
+  const handler = createAuditHandler({ executeAudit: executor, logger: { error() {} } })
+  const firstScan = invokeAudit(handler, 'https://example.com/')
+  await entered
+
+  const busy = await invokeAudit(handler, 'https://example.com/')
+  assert.equal(busy.statusCode, 429)
+  assert.equal(busy.headers['Retry-After'], '1')
+  assert.equal(JSON.parse(busy.body).code, 'AUDIT_BUSY')
+
+  releaseBoundary(new BrowserNetworkBoundaryError())
+  const first = await firstScan
+  assert.equal(first.statusCode, 503)
+  assert.equal(JSON.parse(first.body).code, 'BROWSER_NETWORK_UNAVAILABLE')
 })
 
 test('unsupported methods return JSON with the allowed method', async () => {

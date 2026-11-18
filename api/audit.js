@@ -1,5 +1,18 @@
 import { randomUUID } from 'node:crypto'
 import { isAuditError, isAuditReport, isAuditRequest } from '../src/shared/audit-contract.js'
+import {
+  BrowserAdmissionError,
+} from '../server/browser-admission.js'
+import {
+  BrowserAuditError,
+  runBrowserAudit,
+} from '../server/browser-audit.js'
+import {
+  BrowserNetworkBoundaryError,
+} from '../server/browser-network.js'
+import {
+  DestinationPolicyError,
+} from '../server/destination-policy.js'
 
 const MAX_REQUEST_BYTES = 16 * 1024
 
@@ -200,8 +213,20 @@ export function createAuditHandler({ executeAudit, logger = console } = {}) {
       return
     }
 
+    const controller = new AbortController()
+    const abortOnDisconnect = () => controller.abort()
+    const abortOnResponseClose = () => {
+      if (!response.writableEnded) controller.abort()
+    }
+    request.once?.('aborted', abortOnDisconnect)
+    response.once?.('close', abortOnResponseClose)
     try {
-      const report = await executeAudit(normalizeAuditUrl(payload.url), requestId)
+      if (request.aborted) controller.abort()
+      const report = await executeAudit(
+        normalizeAuditUrl(payload.url),
+        requestId,
+        { signal: controller.signal },
+      )
       if (!isAuditReport(report)) {
         logDiagnostic(logger, requestId, 'INVALID_AUDIT_REPORT')
         sendError(
@@ -230,17 +255,27 @@ export function createAuditHandler({ executeAudit, logger = console } = {}) {
         return
       }
       sendJson(response, 200, safeReport)
-    } catch {
-      logDiagnostic(logger, requestId, 'AUDIT_FAILED')
-      sendError(
-        response,
-        500,
-        'AUDIT_FAILED',
-        'The website check could not be completed.',
-        requestId,
-      )
+    } catch (error) {
+      const knownError = error instanceof BrowserAdmissionError
+        || error instanceof BrowserAuditError
+        || error instanceof BrowserNetworkBoundaryError
+        || error instanceof DestinationPolicyError
+      const status = knownError ? error.status : 500
+      const code = knownError ? error.code : 'AUDIT_FAILED'
+      const message = knownError
+        ? error.message
+        : 'The website check could not be completed.'
+      logDiagnostic(logger, requestId, code)
+      if (response.destroyed || response.writableEnded) return
+      if (knownError && typeof error.retryAfterSeconds === 'number') {
+        response.setHeader('Retry-After', String(error.retryAfterSeconds))
+      }
+      sendError(response, status, code, message, requestId)
+    } finally {
+      request.removeListener?.('aborted', abortOnDisconnect)
+      response.removeListener?.('close', abortOnResponseClose)
     }
   }
 }
 
-export default createAuditHandler()
+export default createAuditHandler({ executeAudit: runBrowserAudit })

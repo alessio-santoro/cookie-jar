@@ -3,6 +3,7 @@ import { createServer } from 'node:http'
 import { performance } from 'node:perf_hooks'
 import chromium from '@sparticuz/chromium'
 import { chromium as playwright } from 'playwright-core'
+import { createBrowserEnvironment } from './browser-environment.js'
 import {
   createBrowserAdmission,
   waitForBrowserOperation,
@@ -99,15 +100,7 @@ function includesCookie(cookies, name, predicate = () => true) {
   return cookies.some((cookie) => cookie.name === name && predicate(cookie))
 }
 
-export function createBrowserEnvironment(environment = process.env) {
-  return {
-    PATH: environment.PATH ?? '',
-    HOME: '/tmp',
-    TMPDIR: '/tmp',
-    LANG: 'en_US.UTF-8',
-    LD_LIBRARY_PATH: environment.LD_LIBRARY_PATH ?? '',
-  }
-}
+export { createBrowserEnvironment } from './browser-environment.js'
 
 async function captureBrowserObservation({
   stallNavigation = false,

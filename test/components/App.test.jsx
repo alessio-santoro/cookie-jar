@@ -136,7 +136,9 @@ describe('website address form', () => {
     await user.type(input, 'https://retry.example')
     expect(screen.queryByRole('heading', { name: 'Tracking cookies detected' })).not.toBeInTheDocument()
     await user.click(button)
-    expect(await screen.findByRole('alert')).toHaveTextContent('Website checks are not available yet.')
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      'Website checks are unavailable because required browser or network protections could not start.',
+    )
     expect(screen.queryByRole('heading', { name: 'Tracking cookies detected' })).not.toBeInTheDocument()
 
     await user.click(button)
