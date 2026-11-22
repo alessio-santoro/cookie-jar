@@ -77,8 +77,8 @@ export default function App() {
             Check a website before you choose.
           </h1>
           <p className="mt-4 max-w-2xl text-lg leading-7 text-slate-700">
-            Request a fresh visit to see which cookies appear before a consent
-            choice. It does not use your browser, account, or browsing history.
+            Request a fresh, pre-consent visit to the exact public page you submit.
+            It does not use your browser or interact with consent controls.
           </p>
         </header>
 
@@ -127,9 +127,9 @@ export default function App() {
           </form>
 
           <p className="mt-5 rounded-lg bg-amber-50 px-4 py-3 text-sm leading-6 text-amber-950">
-            Checks use a fresh browser visit and only public HTTP(S) addresses.
-            No scan will run if the required browser or network protections are
-            unavailable.
+            This is a bounded visit to one submitted page, not a crawl of the
+            whole domain or a post-consent comparison. No scan will run if the
+            required browser or network protections are unavailable.
           </p>
 
           {pending && (

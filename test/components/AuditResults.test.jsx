@@ -21,22 +21,22 @@ const zeroCookieReport = {
 }
 
 describe('audit result summary', () => {
-  it('explains a known tracking match and its associated provider', () => {
+  it('explains configured signature matches and associated providers', () => {
     render(<AuditResults report={validAuditReport} />)
 
-    expect(screen.getByRole('heading', { name: 'Tracking cookies detected' }))
+    expect(screen.getByRole('heading', { name: 'Configured cookie signatures matched' }))
       .toBeInTheDocument()
     expect(screen.getAllByText(/Google Analytics/)).toHaveLength(2)
     expect(screen.getByText(/not proof that cookie data was transmitted/))
       .toBeInTheDocument()
-    expect(screen.getAllByText('Analytics')).toHaveLength(2)
+    expect(screen.getAllByText('Analytics')).toHaveLength(1)
     expect(screen.getByText(/1 cookie observed in this visit/)).toBeInTheDocument()
   })
 
-  it('uses the review heading for unknown-only cookies and explains uncertainty', () => {
+  it('uses the unclassified heading for unknown-only cookies and explains uncertainty', () => {
     render(<AuditResults report={sessionCookieReviewReport} />)
 
-    expect(screen.getByRole('heading', { name: 'Some cookies are unidentified' }))
+    expect(screen.getByRole('heading', { name: 'Observed cookies are unclassified' }))
       .toBeInTheDocument()
     expect(screen.getByText(/not enough signature information to identify the purpose/))
       .toBeInTheDocument()
@@ -46,7 +46,7 @@ describe('audit result summary', () => {
   it('explains zero cookies, capture details, warnings, and scope limitations', () => {
     render(<AuditResults report={zeroCookieReport} />)
 
-    expect(screen.getByRole('heading', { name: 'No known tracking cookies observed' }))
+    expect(screen.getByRole('heading', { name: 'No configured signatures matched' }))
       .toBeInTheDocument()
     expect(screen.getByText(/No cookies were observed during this visit/))
       .toBeInTheDocument()
@@ -61,7 +61,9 @@ describe('audit result summary', () => {
     expect(screen.getByText(/20 seconds/)).toBeInTheDocument()
     expect(screen.getByText(/3 seconds/)).toBeInTheDocument()
     expect(screen.getByText(/2 seconds/)).toBeInTheDocument()
-    expect(screen.getByText(/does not use your browser, account, history, or earlier consent choices/))
+    expect(screen.getByText(/exact submitted page, before any consent choice/))
+      .toBeInTheDocument()
+    expect(screen.getByText(/does not crawl the domain or compare post-consent behavior/))
       .toBeInTheDocument()
     expect(screen.queryByText(/privacy score|100% safe/i)).not.toBeInTheDocument()
   })

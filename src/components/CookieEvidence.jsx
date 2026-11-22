@@ -4,6 +4,11 @@ function formatCategory(category) {
   return category[0] + category.slice(1).toLowerCase()
 }
 
+function formatCategoryAssociation(category) {
+  if (category === 'UNCLASSIFIED') return 'Unclassified'
+  return `${formatCategory(category)} (heuristic association)`
+}
+
 function CookieDetails({ cookie }) {
   return (
     <details className="mt-2">
@@ -17,7 +22,7 @@ function CookieDetails({ cookie }) {
         <div>
           <dt className="font-semibold text-slate-700">Provider association</dt>
           <dd className="break-all text-slate-900">
-            {cookie.provider ?? 'Not identified by a known signature'}
+            {cookie.provider ?? 'No configured signature matched'}
           </dd>
         </div>
         <div>
@@ -45,6 +50,12 @@ function CookieDetails({ cookie }) {
         <p className="mt-2 text-sm leading-5 text-slate-600">
           The provider is associated with a cookie-name signature; this does not
           prove that data was transmitted.
+        </p>
+      )}
+      {!cookie.provider && (
+        <p className="mt-2 text-sm leading-5 text-slate-600">
+          This cookie is unclassified because no configured signature matched.
+          Unclassified does not mean essential or safe.
         </p>
       )}
     </details>
@@ -118,7 +129,7 @@ export default function CookieEvidence({ cookies }) {
                   {cookie.domain}
                 </td>
                 <td className="p-3 align-top text-sm text-slate-800">
-                  {formatCategory(cookie.category)}
+                  {formatCategoryAssociation(cookie.category)}
                 </td>
                 <td className="p-3 align-top">
                   <CookieExpiration expiresAt={cookie.expiresAt} />

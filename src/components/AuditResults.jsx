@@ -3,18 +3,18 @@ import CookieEvidence from './CookieEvidence.jsx'
 
 const OUTCOME_DETAILS = {
   FAIL: {
-    heading: 'Tracking cookies detected',
-    explanation: 'At least one cookie matched a known Analytics or Marketing signature during this visit.',
+    heading: 'Configured cookie signatures matched',
+    explanation: 'Observed cookies matched one or more configured Analytics or Marketing signatures during this visit.',
     color: 'text-red-800',
   },
   REVIEW: {
-    heading: 'Some cookies are unidentified',
-    explanation: 'No known tracking signature was found, but one or more cookies could not be classified.',
+    heading: 'Observed cookies are unclassified',
+    explanation: 'One or more observed cookies matched no configured signature.',
     color: 'text-amber-900',
   },
   PASS: {
-    heading: 'No known tracking cookies observed',
-    explanation: 'No known tracking signatures or unidentified cookies were observed in this visit.',
+    heading: 'No configured signatures matched',
+    explanation: 'No observed cookie matched a configured signature. This is not evidence that other tracking does not exist.',
     color: 'text-teal-900',
   },
 }
@@ -23,17 +23,17 @@ const CATEGORIES = [
   {
     key: 'essential',
     name: 'Essential',
-    explanation: 'Associated with basic site functions; the name alone does not prove a cookie is necessary.',
+    explanation: 'A heuristic association with basic site functions; the name alone does not prove the cookie is necessary.',
   },
   {
     key: 'analytics',
     name: 'Analytics',
-    explanation: 'Associated with measuring visits and how a site is used.',
+    explanation: 'A heuristic association with measuring visits and how a site is used.',
   },
   {
     key: 'marketing',
     name: 'Marketing',
-    explanation: 'Associated with advertising and marketing activity.',
+    explanation: 'A heuristic association with advertising and marketing activity.',
   },
   {
     key: 'unclassified',
@@ -165,10 +165,15 @@ export default function AuditResults({ report }) {
       <aside className="rounded-xl bg-slate-100 p-5 text-sm leading-6 text-slate-800 sm:p-7">
         <h3 className="font-semibold text-slate-950">What this result can and cannot tell you</h3>
         <p className="mt-2">
-          This is one fresh visit before a consent choice. It does not use your
-          browser, account, history, or earlier consent choices, and it does not
-          cover other pages, post-consent behavior, later cookies, local storage,
-          fingerprinting, or cookieless tracking.
+          This is one bounded, fresh visit to the exact submitted page, before
+          any consent choice. It does not use your browser or interact with
+          consent controls, and it does not crawl the domain or compare
+          post-consent behavior.
+        </p>
+        <p className="mt-2">
+          It does not cover other pages, later behavior, local storage,
+          fingerprinting, cookieless tracking, or actual cookie reads or network
+          transmissions.
         </p>
         <p className="mt-2">
           Cookie-name signatures are heuristic: they do not prove a cookie&apos;s

@@ -46,6 +46,23 @@ describe('cookie evidence table', () => {
     expect(screen.getByText('/')).toBeInTheDocument()
   })
 
+  it('describes unmatched cookies as unclassified, not essential or safe', async () => {
+    const user = userEvent.setup()
+    const cookie = {
+      ...validAuditReport.cookies[0],
+      name: 'custom_cookie',
+      category: 'UNCLASSIFIED',
+      provider: null,
+      matchedSignature: null,
+    }
+    render(<CookieEvidence cookies={[cookie]} />)
+
+    await user.click(screen.getByText('More details'))
+
+    expect(screen.getByText('No configured signature matched')).toBeInTheDocument()
+    expect(screen.getByText(/Unclassified does not mean essential or safe/)).toBeInTheDocument()
+  })
+
   it('keeps long cookie names and domains inside a labeled mobile scroll region', () => {
     const cookie = {
       ...validAuditReport.cookies[0],

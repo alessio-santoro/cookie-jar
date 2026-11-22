@@ -29,6 +29,17 @@ afterEach(() => {
 })
 
 describe('website address form', () => {
+  it('explains the exact-page, fresh, pre-consent audit scope', () => {
+    render(<App />)
+
+    expect(screen.getByText(/fresh, pre-consent visit to the exact public page/i))
+      .toBeInTheDocument()
+    expect(screen.getByText(/does not use your browser or interact with consent controls/i))
+      .toBeInTheDocument()
+    expect(screen.getByText(/not a crawl of the whole domain or a post-consent comparison/i))
+      .toBeInTheDocument()
+  })
+
   it('associates invalid address feedback and makes no API request', async () => {
     const fetchMock = vi.fn()
     vi.stubGlobal('fetch', fetchMock)
@@ -65,7 +76,7 @@ describe('website address form', () => {
     await act(async () => {
       pendingResponse.resolve(response(200, validAuditReport))
     })
-    expect(await screen.findByRole('heading', { name: 'Tracking cookies detected' })).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: 'Configured cookie signatures matched' })).toBeInTheDocument()
     expect(button).toBeEnabled()
   })
 
@@ -130,20 +141,20 @@ describe('website address form', () => {
 
     await user.type(input, 'https://example.com')
     await user.click(button)
-    expect(await screen.findByRole('heading', { name: 'Tracking cookies detected' })).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: 'Configured cookie signatures matched' })).toBeInTheDocument()
 
     await user.clear(input)
     await user.type(input, 'https://retry.example')
-    expect(screen.queryByRole('heading', { name: 'Tracking cookies detected' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('heading', { name: 'Configured cookie signatures matched' })).not.toBeInTheDocument()
     await user.click(button)
     expect(await screen.findByRole('alert')).toHaveTextContent(
       'Website checks are unavailable because required browser or network protections could not start.',
     )
-    expect(screen.queryByRole('heading', { name: 'Tracking cookies detected' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('heading', { name: 'Configured cookie signatures matched' })).not.toBeInTheDocument()
 
     await user.click(button)
     await waitFor(() => {
-      expect(screen.getByRole('heading', { name: 'Tracking cookies detected' })).toBeInTheDocument()
+      expect(screen.getByRole('heading', { name: 'Configured cookie signatures matched' })).toBeInTheDocument()
     })
     expect(screen.getAllByText(/https:\/\/retry\.example\//)).toHaveLength(2)
     expect(fetchMock).toHaveBeenCalledTimes(3)

@@ -1,9 +1,11 @@
 # CookieJar
 
-A privacy-focused website checker with an accessible React interface and a
-same-origin API for fresh, isolated visits to public websites. Live checks run
+A privacy-focused audit tool with an accessible React interface and a
+same-origin API for fresh, isolated visits to one public page. Live checks run
 only when the local browser and network protections are available; deployment
-and public service readiness have not been verified.
+and public service readiness have not been verified. The audit observes cookie
+metadata before a consent choice and does not claim purpose, safety, or
+compliance.
 
 ## Requirements
 
@@ -200,15 +202,17 @@ The internal outcomes map to these user-facing headings:
 
 | Internal outcome | Heading |
 | --- | --- |
-| FAIL | Tracking cookies detected |
-| REVIEW | Some cookies are unidentified |
-| PASS | No known tracking cookies observed |
+| FAIL | Configured cookie signatures matched |
+| REVIEW | Observed cookies are unclassified |
+| PASS | No configured signatures matched |
 
 These headings describe only observed cookie evidence. A future scan is scoped
-to one fresh visit before consent interaction; it does not inspect a person's
-browser, account, history, or earlier consent choices. It does not cover other
-pages, post-consent behavior, local storage, fingerprinting, cookieless tracking,
-or cookies created later. A classification does not establish actual cookie
+to the exact submitted page in one fresh visit before consent interaction; it
+does not inspect a person's browser, account, history, or earlier consent
+choices, and it does not interact with consent controls or crawl the domain.
+It does not cover other pages, post-consent behavior, local storage,
+fingerprinting, cookieless tracking, actual cookie reads or transmissions, or
+cookies created later. A classification does not establish actual cookie
 intent, guarantee a website is safe, or certify legal compliance.
 
 FAIL takes precedence when any Analytics or Marketing signature is found.
@@ -327,6 +331,8 @@ verification and do not enable an unrestricted scan endpoint.
 - Vercel browser deployment and public-only network protection remain unverified.
   Public scanning must stay disabled until all feasibility and release gates pass.
 
-See the approved [proposal](openspec/changes/bootstrap-cookiejar-mvp/proposal.md),
-[design](openspec/changes/bootstrap-cookiejar-mvp/design.md), and
-[tasks](openspec/changes/bootstrap-cookiejar-mvp/tasks.md).
+See the current change
+[proposal](openspec/changes/pre-consent-cookie-audit/proposal.md),
+[design](openspec/changes/pre-consent-cookie-audit/design.md),
+[spec](openspec/changes/pre-consent-cookie-audit/specs/cookie-audit/spec.md), and
+[tasks](openspec/changes/pre-consent-cookie-audit/tasks.md).
